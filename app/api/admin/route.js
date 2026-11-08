@@ -78,8 +78,19 @@ export async function POST(req) {
         for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.ref) referralCount += 1; }
       }
     } catch {}
+    const notes = {};
+    try {
+      const nRes = await sbFetch('site_settings?key=like.estore_note_*&select=key,value&order=key.desc&limit=400');
+      if (nRes.ok) {
+        const rows = await nRes.json().catch(() => []);
+        for (const r of rows || []) {
+          const code = String(r.key).replace('estore_note_', '').replace(/_\d+$/, '');
+          if (!(code in notes)) { const v = parseJson(r.value, null); notes[code] = v && v.note ? String(v.note) : ''; }
+        }
+      }
+    } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons, searchLog, referralCount,
+      ok: true, orders, products, coupons, searchLog, referralCount, notes,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
       announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : '',
       payments, reviews, autodelivery,
@@ -142,6 +153,11 @@ export async function POST(req) {
     const ok = await insertSettingVersion('estore_autodelivery_' + String(body.productId || ''), {
       fixedText: String(body.fixedText || '').slice(0, 2000),
     });
+    return NextResponse.json({ ok });
+  }
+
+  if (action === 'save-note') {
+    const ok = await insertSettingVersion('estore_note_' + String(body.orderId || ''), { note: String(body.note || '').slice(0, 500) });
     return NextResponse.json({ ok });
   }
 

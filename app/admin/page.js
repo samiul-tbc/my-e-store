@@ -134,6 +134,16 @@ function OrdersTab({ data, api, reload }) {
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tgMsg, setTgMsg] = useState('');
+  const [selected, setSelected] = useState([]);
+  const [bulkStatus, setBulkStatus] = useState('completed');
+  const [noteEdit, setNoteEdit] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const toggleSel = (oid) => setSelected((prev) => prev.includes(oid) ? prev.filter((x) => x !== oid) : [...prev, oid]);
+  const applyBulk = async () => {
+    for (const oid of selected) await api('set-status', { orderId: oid, status: bulkStatus });
+    setSelected([]);
+    reload();
+  };
   const [notify, setNotify] = useState(null);
   const orders = data.orders || [];
   const trxCount = {};
@@ -194,6 +204,16 @@ function OrdersTab({ data, api, reload }) {
         }}><Icon name="send" size={13} />Telegram Test</button>
         {tgMsg && <span style={{ fontSize: '12.5px', color: 'var(--muted)', alignSelf: 'center' }}>{tgMsg}</span>}
       </div>
+      {selected.length > 0 && (
+        <div style={{ display: 'flex', gap: '9px', alignItems: 'center', flexWrap: 'wrap', marginTop: '12px', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.35)', padding: '10px 13px', borderRadius: '12px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800 }}>{selected.length}টি সিলেক্ট করা</span>
+          <select className="inp" style={{ width: '140px', padding: '8px 10px', fontSize: '13px' }} value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}>
+            {STATUSES.map((st) => <option key={st} value={st}>{ST_LABEL[st]}</option>)}
+          </select>
+          <button className="btn-lime" style={{ padding: '8px 15px', fontSize: '13px' }} onClick={applyBulk}>সবগুলোতে প্রয়োগ</button>
+          <button className="btn-ghost" style={{ padding: '8px 12px', fontSize: '12.5px' }} onClick={() => setSelected([])}>বাদ দিন</button>
+        </div>
+      )}
       <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '13px' }} onClick={() => {
         const rows = [['Order ID', 'Date', 'Customer', 'Phone', 'Service', 'Price', 'Method', 'TrxID', 'Status']];
         for (const o of filtered) rows.push([o.order_id, o.created_at || '', o.customer_name, o.whatsapp_number, o.service_name, o.price, o.payment_method || '', o.trx_id || '', o.status]);
@@ -212,7 +232,10 @@ function OrdersTab({ data, api, reload }) {
             <div key={o.id} className="glass" style={{ padding: '15px 16px', borderRadius: '15px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 <div style={{ minWidth: '200px' }}>
-                  <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, color: '#a6f36a', fontSize: '15px' }}>{o.order_id}</span>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={selected.includes(o.order_id)} onChange={() => toggleSel(o.order_id)} style={{ width: '16px', height: '16px', accentColor: '#a6f36a' }} />
+                    <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, color: '#a6f36a', fontSize: '15px' }}>{o.order_id}</span>
+                  </label>
                   <span className="status-pill" style={{ background: st.bg, border: '1px solid ' + st.bd, color: st.fg, marginLeft: '9px' }}>{ST_LABEL[o.status] || o.status}</span>
                   {dupe && <span className="status-pill" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', marginLeft: '6px' }}>Duplicate TrxID!</span>}
                   <div style={{ fontWeight: 700, fontSize: '14.5px', marginTop: '6px' }}>{o.service_name}</div>
@@ -221,6 +244,19 @@ function OrdersTab({ data, api, reload }) {
                     ৳{o.price} • {o.payment_method || 'পেমেন্ট হয়নি'}{o.trx_id ? ' • TrxID: ' + o.trx_id : ''}<br />
                     {o.created_at ? new Date(o.created_at).toLocaleString('bn-BD') : ''}
                   </div>
+                  {data.notes && data.notes[o.order_id] && noteEdit !== o.order_id && (
+                    <div style={{ marginTop: '7px', fontSize: '12.5px', color: '#fcd34d', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', padding: '6px 9px', borderRadius: '8px', maxWidth: '420px' }}>নোট: {data.notes[o.order_id]}</div>
+                  )}
+                  {noteEdit === o.order_id ? (
+                    <div style={{ display: 'flex', gap: '7px', marginTop: '8px', maxWidth: '440px' }}>
+                      <input className="inp" style={{ padding: '8px 11px', fontSize: '13px' }} value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="অভ্যন্তরীণ নোট..." />
+                      <button className="btn-lime" style={{ padding: '8px 13px', fontSize: '12.5px' }} onClick={async () => { await api('save-note', { orderId: o.order_id, note: noteText }); setNoteEdit(null); reload(); }}>সেভ</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setNoteEdit(o.order_id); setNoteText((data.notes && data.notes[o.order_id]) || ''); }} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', padding: '5px 0 0', fontFamily: 'inherit' }}>
+                      {data.notes && data.notes[o.order_id] ? 'নোট এডিট' : '+ নোট যোগ করুন'}
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
                   <select className="inp" style={{ padding: '9px 11px', fontSize: '13.5px', width: '150px' }} value={o.status} onChange={(e) => setStatus(o, e.target.value)}>
@@ -270,6 +306,10 @@ function ProductsTab({ data, api, reload }) {
               <div style={{ fontWeight: 800, fontSize: '14.5px' }}>{p.title || '(নাম নেই)'} {p.published === false && <span style={{ color: '#fca5a5', fontSize: '11px', fontWeight: 800 }}>HIDDEN</span>}</div>
               <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '3px' }}>৳{p.price}{p.oldPrice > p.price ? ' • আগের ৳' + p.oldPrice : ''} • {p.type}{p.infoForm ? ' • তথ্য ফর্ম' : ''}</div>
             </div>
+            <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px' }}>
+              <button aria-label="move up" onClick={() => { const i = products.findIndex((x) => x.id === p.id); if (i > 0) { const next = [...products]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; setProducts(next); } }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: '#cbd5e1', borderRadius: '6px', width: '24px', height: '17px', cursor: 'pointer', fontSize: '10px', lineHeight: 1 }}>▲</button>
+              <button aria-label="move down" onClick={() => { const i = products.findIndex((x) => x.id === p.id); if (i < products.length - 1) { const next = [...products]; [next[i + 1], next[i]] = [next[i], next[i + 1]]; setProducts(next); } }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: '#cbd5e1', borderRadius: '6px', width: '24px', height: '17px', cursor: 'pointer', fontSize: '10px', lineHeight: 1 }}>▼</button>
+            </span>
             <Toggle label="Published" on={p.published !== false} onClick={() => patch(p.id, { published: p.published === false ? true : false })} />
             <Toggle label="Featured" on={!!p.featured} onClick={() => patch(p.id, { featured: !p.featured })} />
             <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => setEdit(JSON.parse(JSON.stringify(p)))}><Icon name="edit" size={14} />এডিট</button>
@@ -534,7 +574,17 @@ function InsightsTab({ data }) {
         ))}
       </div>
       <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
-        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '13px' }}>গত ৭ দিনের আয় (সম্পন্ন)</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px', flexWrap: 'wrap', gap: '8px' }}>
+          <span style={{ fontWeight: 800, fontSize: '15px' }}>গত ৭ দিনের আয় (সম্পন্ন)</span>
+          {(() => {
+            const todaySum = days[6] ? days[6].sum : 0;
+            const yestSum = days[5] ? days[5].sum : 0;
+            if (!yestSum && !todaySum) return null;
+            const pct = yestSum ? Math.round(((todaySum - yestSum) / yestSum) * 100) : 100;
+            const up = pct >= 0;
+            return <span style={{ fontSize: '12px', fontWeight: 800, color: up ? '#a6f36a' : '#fca5a5', background: up ? 'rgba(166,243,106,0.1)' : 'rgba(239,68,68,0.1)', border: '1px solid ' + (up ? 'rgba(166,243,106,0.4)' : 'rgba(239,68,68,0.4)'), padding: '3px 9px', borderRadius: '999px' }}>আজ {up ? '▲' : '▼'} {Math.abs(pct)}% (গতকালের তুলনায়)</span>;
+          })()}
+        </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '9px', height: '110px' }}>
           {days.map((d, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>

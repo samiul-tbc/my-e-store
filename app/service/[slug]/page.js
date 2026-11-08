@@ -11,7 +11,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: p.title + ' — TBC × E-store',
       description: desc,
-      images: p.image ? [p.image] : [],
+      images: ['/api/og?title=' + encodeURIComponent(p.title) + '&price=' + encodeURIComponent(String(p.price))],
       type: 'website',
     },
   };
