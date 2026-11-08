@@ -153,7 +153,7 @@ function OrdersTab({ data, api, reload }) {
     if (d && d.ok) {
       const phone = waNum(o.whatsapp_number);
       const msg = status === 'completed'
-        ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name}) সম্পন্ন হয়েছে। Track Order পেজে ডেলিভারি পেয়ে যাবেন: https://my-e-store.vercel.app/track — TBC × E-store`
+        ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name}) সম্পন্ন হয়েছে। Track Order পেজে ডেলিভারি পেয়ে যাবেন: ${typeof window !== 'undefined' ? window.location.origin : ''}/track — TBC × E-store`
         : status === 'processing'
           ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name}) প্রসেসিং চলছে। শীঘ্রই সম্পন্ন হবে — TBC × E-store`
           : status === 'cancelled'
@@ -270,6 +270,7 @@ function ProductsTab({ data, api, reload }) {
                 <Field label="Old price (৳)"><input className="inp" type="number" value={edit.oldPrice || 0} onChange={(e) => setEdit({ ...edit, oldPrice: Number(e.target.value) })} /></Field>
               </div>
               <Field label="Image URL / path"><input className="inp" value={edit.image} onChange={(e) => setEdit({ ...edit, image: e.target.value })} /></Field>
+              <Field label="Extra images (এক লাইনে একটা URL — gallery)"><textarea className="inp" rows={2} value={(edit.images || []).join('\n')} onChange={(e) => setEdit({ ...edit, images: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) })} /></Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="ধরন (type)">
                   <select className="inp" value={edit.type} onChange={(e) => setEdit({ ...edit, type: e.target.value })}>

@@ -51,6 +51,7 @@ export async function GET() {
       price: p.price,
       oldPrice: p.oldPrice || 0,
       image: p.image,
+      images: Array.isArray(p.images) && p.images.length ? p.images : [p.image],
       type: p.type,
       infoForm: !!p.infoForm,
       featured: !!p.featured,

@@ -149,3 +149,15 @@ a { color: inherit; }
 }
 .admin-tab.on { background: rgba(166,243,106,0.14); border-color: rgba(166,243,106,0.6); color: var(--accent); }
 .status-pill { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.3px; }
+
+::selection { background: rgba(166,243,106,0.35); }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #26313f; border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.skel { position: relative; overflow: hidden; background: #10151d; border-radius: 14px; }
+.skel:after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.055) 50%, transparent 70%); animation: skel-shine 1.3s infinite; }
+@keyframes skel-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 0.9, 0.3, 1); }
+.reveal.in { opacity: 1; transform: none; }

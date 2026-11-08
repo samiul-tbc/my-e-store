@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useLang } from './LangContext';
 import Icon from './icons';
+import WishHeart from './WishHeart';
 
 export function Stars({ rating, count }) {
   const full = Math.round(rating || 0);
@@ -24,6 +25,7 @@ export default function ProductCard({ p }) {
     <Link href={`/service/${p.id}`} className="svc-card">
       <div className="svc-media">
         {off > 0 && <span className="off-badge">-{off}%</span>}
+        <WishHeart id={p.id} />
         <img src={p.image} alt={p.title} loading="lazy" />
       </div>
       <div className="svc-body">

@@ -4,17 +4,31 @@ import Link from 'next/link';
 import { useLang } from '../components/LangContext';
 import Icon from '../components/icons';
 import ProductCard from '../components/ProductCard';
+import { readRecent } from '../lib/personal';
 
 export default function HomePage() {
   const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [recent, setRecent] = useState([]);
+
+  useEffect(() => {
+    const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     fetch('/api/products')
       .then((r) => r.json())
-      .then((d) => { setProducts(d.products || []); setLoading(false); })
+      .then((d) => {
+        const list = d.products || [];
+        setProducts(list);
+        const rids = readRecent();
+        setRecent(list.filter((x) => rids.includes(x.id)).sort((a, b) => rids.indexOf(a.id) - rids.indexOf(b.id)));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -69,7 +83,18 @@ export default function HomePage() {
         <h2 className="section-title">{query ? `${t.servicesTitle} — ${filtered.length}` : t.servicesTitle}</h2>
         <p className="section-sub">{t.servicesSub}</p>
         {loading ? (
-          <p style={{ color: 'var(--muted)', marginTop: '22px' }}>{t.processing}</p>
+          <div className="svc-grid" style={{ marginTop: '24px' }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="svc-card" style={{ cursor: 'default' }}>
+                <div className="skel" style={{ height: '210px', borderRadius: 0 }} />
+                <div className="svc-body">
+                  <div className="skel" style={{ height: '16px', width: '75%', marginBottom: '10px' }} />
+                  <div className="skel" style={{ height: '13px', width: '95%', marginBottom: '16px' }} />
+                  <div className="skel" style={{ height: '20px', width: '40%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <p style={{ color: 'var(--muted)', marginTop: '22px' }}>{t.noResults}</p>
         ) : (
@@ -79,8 +104,28 @@ export default function HomePage() {
         )}
       </section>
 
+      {/* RECENTLY VIEWED */}
+      {!query && recent.length > 0 && (
+        <section style={{ padding: '48px 0 0' }}>
+          <h2 className="section-title" style={{ fontSize: '22px' }}>{t.recentTitle}</h2>
+          <div style={{ display: 'flex', gap: '13px', overflowX: 'auto', padding: '18px 2px 6px', scrollbarWidth: 'none' }}>
+            {recent.map((p) => (
+              <a key={p.id} href={'/service/' + p.id} style={{ minWidth: '210px', maxWidth: '210px', textDecoration: 'none', color: 'inherit' }} className="svc-card">
+                <div className="svc-media" style={{ height: '112px' }}>
+                  <img src={p.image} alt={p.title} loading="lazy" />
+                </div>
+                <div style={{ padding: '11px 13px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
+                  <div className="price" style={{ fontSize: '16px', marginTop: '4px' }}>৳{p.price}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* HOW IT WORKS */}
-      <section id="how" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
+      <section id="how" className="reveal" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
         <h2 className="section-title">{t.howTitle}</h2>
         <div className="steps" style={{ marginTop: '24px' }}>
           {[
@@ -101,7 +146,7 @@ export default function HomePage() {
       </section>
 
       {/* WHY */}
-      <section style={{ padding: '56px 0 6px' }}>
+      <section style={{ padding: '56px 0 6px' }} className="reveal">
         <h2 className="section-title">{t.whyTitle}</h2>
         <div className="steps" style={{ marginTop: '24px' }}>
           {[
@@ -121,7 +166,7 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
+      <section id="faq" className="reveal" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
         <h2 className="section-title">{t.faqTitle}</h2>
         <div style={{ display: 'grid', gap: '12px', marginTop: '24px' }}>
           {[[t.q1, t.a1], [t.q2, t.a2], [t.q3, t.a3]].map(([q, a]) => (

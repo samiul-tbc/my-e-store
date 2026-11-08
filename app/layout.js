@@ -7,6 +7,8 @@ import Icon from '../components/icons';
 import Logo from '../components/Logo';
 import LiquidSeg from '../components/LiquidSeg';
 import BottomNav from '../components/BottomNav';
+import SwRegister from '../components/SwRegister';
+import WhatsFloat from '../components/WhatsFloat';
 import { readCart } from '../lib/cart';
 
 function AnnouncementBar() {
@@ -93,6 +95,8 @@ export default function RootLayout({ children }) {
         <meta name="description" content="TBC × E-store — premium digital e-services: 3D birthday cards, bio website source code and more. Secure payment, fast digital delivery." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="theme-color" content="#07090d" />
       </head>
       <body>
@@ -101,7 +105,9 @@ export default function RootLayout({ children }) {
           <Header />
           <main>{children}</main>
           <Footer />
+          <WhatsFloat />
           <BottomNav />
+          <SwRegister />
         </LangProvider>
       </body>
     </html>
