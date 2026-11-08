@@ -171,6 +171,12 @@ export default function ServicePage({ params }) {
                   {r.verified && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(166,243,106,0.12)', border: '1px solid rgba(166,243,106,0.4)', color: '#a6f36a', fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '999px' }}><Icon name="shield" size={11} />{t.verifiedBuyer}</span>}
                 </div>
                 <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: 1.7, marginTop: '7px' }}>{r.text}</p>
+                {r.reply && (
+                  <div style={{ marginTop: '10px', background: 'rgba(166,243,106,0.06)', border: '1px solid rgba(166,243,106,0.25)', borderRadius: '10px', padding: '9px 12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#a6f36a', letterSpacing: '0.4px' }}>TBC × E-store</span>
+                    <p style={{ color: '#cbd5e1', fontSize: '13.5px', lineHeight: 1.65, marginTop: '3px' }}>{r.reply}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

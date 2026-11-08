@@ -26,7 +26,7 @@ export async function GET(req) {
         }
       } catch {}
     }
-    out.push({ name: r.name, rating: r.rating, text: r.text, ts: r.ts, verified });
+    out.push({ name: r.name, rating: r.rating, text: r.text, ts: r.ts, verified, reply: r.reply || null });
   }
   out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
   return NextResponse.json({ reviews: out });

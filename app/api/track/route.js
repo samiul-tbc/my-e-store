@@ -17,6 +17,17 @@ async function downloadRemaining(orderId, limit) {
   } catch { return limit; }
 }
 
+async function statusHistory(code) {
+  try {
+    const res = await sbFetch('site_settings?key=like.estore_statuslog_' + encodeURIComponent(code) + '_*&select=value&order=key.asc&limit=100');
+    if (!res.ok) return [];
+    const rows = await res.json().catch(() => []);
+    const out = [];
+    for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.status) out.push({ status: v.status, ts: v.ts || 0 }); }
+    return out.sort((a, b) => a.ts - b.ts);
+  } catch { return []; }
+}
+
 async function presentOrder(order, catalogue) {
   const product = catalogue.find((p) => p.title === order.service_name) || null;
   const out = {
@@ -28,6 +39,7 @@ async function presentOrder(order, catalogue) {
     createdAt: order.created_at,
     productId: product ? product.id : null,
     delivery: null,
+    history: await statusHistory(order.order_id),
   };
   if (order.status === 'completed' && product) {
     if (product.type === 'download') {

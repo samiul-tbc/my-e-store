@@ -13,15 +13,22 @@ const STATUS_STYLE = {
   cancelled: { bg: 'rgba(239,68,68,0.13)', bd: 'rgba(239,68,68,0.45)', fg: '#fca5a5' },
 };
 
-function Timeline({ t, status }) {
+function Timeline({ t, status, createdAt, history }) {
   const step = status === 'completed' ? 3 : status === 'processing' ? 2 : status === 'cancelled' ? 0 : 1;
   const names = [t.tlPlaced, t.tlPaid, t.tlDone];
+  const at = (st) => {
+    if (st === 'placed') return createdAt ? new Date(createdAt) : null;
+    const h = (history || []).filter((x) => x.status === st).pop();
+    return h ? new Date(h.ts) : null;
+  };
+  const dates = [at('placed'), at('processing'), at('completed')];
   return (
     <div className="tl">
       {names.map((n, i) => (
         <div key={n} className={'tl-step' + (step > i ? ' done' : '')}>
           <span className="tl-dot">{step > i ? <Icon name="check" size={15} strokeWidth={3} /> : <span style={{ fontSize: '12px', fontWeight: 800 }}>{i + 1}</span>}</span>
           <div className="tl-name">{n}</div>
+          {dates[i] && step > i && <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>{dates[i].toLocaleDateString()}</div>}
         </div>
       ))}
     </div>
@@ -174,7 +181,7 @@ function TrackInner() {
                 <span className="status-pill" style={{ background: st.bg, border: '1px solid ' + st.bd, color: st.fg }}>{statusLabel(o.status)}</span>
               </div>
               <div style={{ marginTop: '14px' }}>
-                <Timeline t={t} status={o.status} />
+                <Timeline t={t} status={o.status} createdAt={o.createdAt} history={o.history} />
               </div>
               {o.status === 'completed' && o.delivery && o.delivery.kind === 'link' && (
                 <div style={{ marginTop: '14px', background: 'rgba(166,243,106,0.07)', border: '1px solid rgba(166,243,106,0.35)', borderRadius: '14px', padding: '15px' }}>

@@ -542,6 +542,7 @@ function DeliveryTab({ data, api }) {
 
 function ReviewsTab({ data, api, reload }) {
   const products = data.products || [];
+  const [replyText, setReplyText] = useState({});
   return (
     <div style={{ marginTop: '14px', display: 'grid', gap: '18px' }}>
       {products.map((p) => {
@@ -551,7 +552,8 @@ function ReviewsTab({ data, api, reload }) {
             <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '9px' }}>{p.title} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: '12.5px' }}>({list.length} রিভিউ)</span></div>
             <div style={{ display: 'grid', gap: '9px' }}>
               {list.map((r, i) => (
-                <div key={i} className="glass" style={{ padding: '12px 15px', borderRadius: '13px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div key={i}>
+                <div className="glass" style={{ padding: '12px 15px', borderRadius: '13px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontWeight: 800, fontSize: '13.5px' }}>{r.name}</span>
                     <span className="stars" style={{ marginLeft: '8px' }}>{'★'.repeat(r.rating || 5)}</span>
@@ -560,6 +562,12 @@ function ReviewsTab({ data, api, reload }) {
                   <button aria-label="delete review" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={async () => { await api('delete-review', { productId: p.id, ts: r.ts }); reload(); }}>
                     <Icon name="trash" size={13} />
                   </button>
+                </div>
+                {r.reply && <p style={{ color: '#a6f36a', fontSize: '12.5px', marginTop: '6px', paddingLeft: '4px' }}>উত্তর: {r.reply}</p>}
+                <div style={{ display: 'flex', gap: '7px', marginTop: '8px' }}>
+                  <input className="inp" style={{ padding: '8px 11px', fontSize: '13px' }} placeholder="বিক্রেতা হিসেবে উত্তর দিন..." value={replyText[p.id + '_' + r.ts] || ''} onChange={(e) => setReplyText({ ...replyText, [p.id + '_' + r.ts]: e.target.value })} />
+                  <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '12.5px' }} onClick={async () => { await api('reply-review', { productId: p.id, ts: r.ts, reply: replyText[p.id + '_' + r.ts] || '' }); reload(); }}>উত্তর</button>
+                </div>
                 </div>
               ))}
               {list.length === 0 && <p style={{ color: 'var(--muted)', fontSize: '13px' }}>রিভিউ নেই</p>}

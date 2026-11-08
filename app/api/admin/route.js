@@ -141,7 +141,9 @@ export async function POST(req) {
       return rows && rows[0] ? rows[0] : null;
     })();
     if (!order) return NextResponse.json({ ok: false, error: 'notfound' }, { status: 404 });
-    const ok = await updateOrderStatus(order.id, String(body.status || 'pending'));
+    const newStatus = String(body.status || 'pending');
+    const ok = await updateOrderStatus(order.id, newStatus);
+    if (ok) await insertSettingVersion('estore_statuslog_' + String(body.orderId || ''), { status: newStatus, ts: Date.now() });
     return NextResponse.json({ ok });
   }
 
@@ -203,6 +205,14 @@ export async function POST(req) {
 
   if (action === 'save-note') {
     const ok = await insertSettingVersion('estore_note_' + String(body.orderId || ''), { note: String(body.note || '').slice(0, 500) });
+    return NextResponse.json({ ok });
+  }
+
+  if (action === 'reply-review') {
+    const pid = String(body.productId || '');
+    const list = await getReviews(pid);
+    const next = list.map((r) => (r.ts === Number(body.ts) ? { ...r, reply: String(body.reply || '').slice(0, 500) } : r));
+    const ok = await insertSettingVersion('estore_reviews_' + pid, next);
     return NextResponse.json({ ok });
   }
 
