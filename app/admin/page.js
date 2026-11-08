@@ -1,0 +1,563 @@
+'use client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Icon from '../../components/icons';
+import Logo from '../../components/Logo';
+
+const STATUSES = ['pending', 'processing', 'completed', 'cancelled'];
+const ST_LABEL = { pending: 'পেন্ডিং', processing: 'প্রসেসিং', completed: 'সম্পন্ন', cancelled: 'বাতিল' };
+const ST_STYLE = {
+  pending: { bg: 'rgba(251,191,36,0.13)', bd: 'rgba(251,191,36,0.45)', fg: '#fcd34d' },
+  processing: { bg: 'rgba(56,189,248,0.13)', bd: 'rgba(56,189,248,0.45)', fg: '#7dd3fc' },
+  completed: { bg: 'rgba(166,243,106,0.13)', bd: 'rgba(166,243,106,0.45)', fg: '#a6f36a' },
+  cancelled: { bg: 'rgba(239,68,68,0.13)', bd: 'rgba(239,68,68,0.45)', fg: '#fca5a5' },
+};
+const last10 = (s) => String(s || '').replace(/\D/g, '').slice(-10);
+const waNum = (s) => { const d = String(s || '').replace(/\D/g, ''); return d.startsWith('880') ? d : '880' + d.slice(-10); };
+
+export default function AdminPage() {
+  const [token, setToken] = useState('');
+  const [pin, setPin] = useState('');
+  const [authErr, setAuthErr] = useState('');
+  const [data, setData] = useState(null);
+  const [tab, setTab] = useState('orders');
+  const [loading, setLoading] = useState(false);
+
+  const api = useCallback(async (action, extra = {}, tok) => {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': tok || token },
+      body: JSON.stringify({ action, ...extra }),
+    }).catch(() => null);
+    if (!res) return null;
+    return res.json().catch(() => null);
+  }, [token]);
+
+  const loadData = useCallback(async (tok) => {
+    setLoading(true);
+    const d = await api('data', {}, tok);
+    if (d && d.ok) setData(d);
+    setLoading(false);
+  }, [api]);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('tbcx_admin_token');
+      if (saved) { setToken(saved); loadData(saved); }
+    } catch {}
+  }, [loadData]);
+
+  const login = async () => {
+    setAuthErr('');
+    const res = await fetch('/api/admin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', pin }),
+    }).catch(() => null);
+    const d = res ? await res.json().catch(() => null) : null;
+    if (d && d.ok) {
+      setToken(d.token);
+      try { sessionStorage.setItem('tbcx_admin_token', d.token); } catch {}
+      if (d.first) setAuthErr('PIN সেট হয়েছে — এটা মনে রাখবেন');
+      loadData(d.token);
+    } else setAuthErr('PIN ভুল হয়েছে');
+  };
+
+  if (!token) {
+    return (
+      <div className="wrap" style={{ padding: '60px 0', maxWidth: '400px' }}>
+        <div style={{ textAlign: 'center' }}><Logo size={44} /></div>
+        <div className="glass" style={{ padding: '24px', marginTop: '24px', borderRadius: '18px' }}>
+          <div style={{ fontWeight: 800, fontSize: '17px', textAlign: 'center' }}>Admin Panel</div>
+          <p style={{ color: 'var(--muted)', fontSize: '13px', textAlign: 'center', marginTop: '6px', lineHeight: 1.6 }}>
+            প্রথমবার হলে এখানে দেওয়া PIN-টাই সেট হবে — পরে Settings থেকে বদলানো যাবে।
+          </p>
+          <input className="inp" type="password" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') login(); }} style={{ marginTop: '16px', textAlign: 'center', letterSpacing: '4px' }} />
+          {authErr && <p className="err" style={{ textAlign: 'center' }}>{authErr}</p>}
+          <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '14px' }} onClick={login}>
+            <Icon name="lock" size={16} />Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const TABS = [
+    ['orders', 'অর্ডার', 'package'],
+    ['products', 'প্রোডাক্ট', 'grid'],
+    ['coupons', 'কুপন', 'tag'],
+    ['delivery', 'ডেলিভারি', 'download'],
+    ['reviews', 'রিভিউ', 'star'],
+    ['customers', 'কাস্টমার', 'users'],
+    ['insights', 'ইনসাইট', 'chart'],
+    ['settings', 'সেটিংস', 'settings'],
+  ];
+
+  return (
+    <div className="wrap" style={{ padding: '24px 0 60px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, fontFamily: "'Manrope','Hind Siliguri',sans-serif" }}>TBC × E-store — Admin</h1>
+        <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={() => loadData()} disabled={loading}>
+          <Icon name="refresh" size={15} />{loading ? 'লোড হচ্ছে...' : 'রিফ্রেশ'}
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '16px 2px 6px', scrollbarWidth: 'none' }}>
+        {TABS.map(([k, label, icon]) => (
+          <button key={k} className={'admin-tab' + (tab === k ? ' on' : '')} onClick={() => setTab(k)} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+            <Icon name={icon} size={15} />{label}
+            {k === 'orders' && data && data.orders.some((o) => o.status === 'pending') && (
+              <span style={{ background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 800, minWidth: '17px', height: '17px', borderRadius: '999px', display: 'grid', placeItems: 'center', padding: '0 4px' }}>
+                {data.orders.filter((o) => o.status === 'pending').length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {!data ? (
+        <p style={{ color: 'var(--muted)', marginTop: '26px' }}>{loading ? 'লোড হচ্ছে...' : 'ডেটা লোড হয়নি — রিফ্রেশ চাপুন'}</p>
+      ) : (
+        <>
+          {tab === 'orders' && <OrdersTab data={data} api={api} reload={() => loadData()} />}
+          {tab === 'products' && <ProductsTab data={data} api={api} reload={() => loadData()} />}
+          {tab === 'coupons' && <CouponsTab data={data} api={api} reload={() => loadData()} />}
+          {tab === 'delivery' && <DeliveryTab data={data} api={api} reload={() => loadData()} />}
+          {tab === 'reviews' && <ReviewsTab data={data} api={api} reload={() => loadData()} />}
+          {tab === 'customers' && <CustomersTab data={data} />}
+          {tab === 'insights' && <InsightsTab data={data} />}
+          {tab === 'settings' && <SettingsTab data={data} api={api} reload={() => loadData()} setToken={setToken} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function OrdersTab({ data, api, reload }) {
+  const [q, setQ] = useState('');
+  const [notify, setNotify] = useState(null);
+  const orders = data.orders || [];
+  const trxCount = {};
+  for (const o of orders) if (o.trx_id) trxCount[o.trx_id] = (trxCount[o.trx_id] || 0) + 1;
+  const dupeInAll = {};
+  {
+    const allCount = {};
+    for (const o of orders) if (o.trx_id) allCount[o.trx_id] = (allCount[o.trx_id] || 0) + 1;
+    for (const k of Object.keys(allCount)) if (allCount[k] > 1) dupeInAll[k] = true;
+  }
+  void trxCount;
+  const filtered = orders.filter((o) => {
+    const s = (o.order_id + ' ' + o.customer_name + ' ' + o.whatsapp_number + ' ' + o.service_name + ' ' + (o.trx_id || '')).toLowerCase();
+    return s.includes(q.toLowerCase());
+  });
+
+  const setStatus = async (o, status) => {
+    const d = await api('set-status', { orderId: o.order_id, status });
+    if (d && d.ok) {
+      const phone = waNum(o.whatsapp_number);
+      const msg = status === 'completed'
+        ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name}) সম্পন্ন হয়েছে। Track Order পেজে ডেলিভারি পেয়ে যাবেন: https://my-e-store.vercel.app/track — TBC × E-store`
+        : status === 'processing'
+          ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name}) প্রসেসিং চলছে। শীঘ্রই সম্পন্ন হবে — TBC × E-store`
+          : status === 'cancelled'
+            ? `আসসালামু আলাইকুম ${o.customer_name}, দুঃখিত — আপনার অর্ডার ${o.order_id} বাতিল করা হয়েছে। প্রয়োজনে যোগাযোগ করুন — TBC × E-store`
+            : '';
+      if (msg) setNotify({ phone, msg, orderId: o.order_id });
+      reload();
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '14px' }}>
+      {notify && (
+        <div style={{ background: 'rgba(166,243,106,0.08)', border: '1px solid rgba(166,243,106,0.4)', borderRadius: '14px', padding: '14px 16px', marginBottom: '14px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13.5px', fontWeight: 700, flex: 1, minWidth: '200px' }}>{notify.orderId} — status change hoyeche. Customer-ke WhatsApp-e janaben?</span>
+          <a className="btn-lime" style={{ padding: '9px 16px', fontSize: '13.5px' }} target="_blank" rel="noreferrer" href={`https://wa.me/${notify.phone}?text=${encodeURIComponent(notify.msg)}`}>
+            <Icon name="message" size={15} />WhatsApp পাঠান
+          </a>
+          <button className="btn-ghost" style={{ padding: '9px 13px', fontSize: '13px' }} onClick={() => setNotify(null)}>বাদ দিন</button>
+        </div>
+      )}
+      <div style={{ position: 'relative', maxWidth: '420px' }}>
+        <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'inline-flex' }}><Icon name="search" size={16} /></span>
+        <input className="inp" style={{ paddingLeft: '40px' }} placeholder="Order ID, নাম, নম্বর, TrxID খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div style={{ display: 'grid', gap: '11px', marginTop: '16px' }}>
+        {filtered.map((o) => {
+          const st = ST_STYLE[o.status] || ST_STYLE.pending;
+          const dupe = o.trx_id && dupeInAll[o.trx_id];
+          return (
+            <div key={o.id} className="glass" style={{ padding: '15px 16px', borderRadius: '15px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ minWidth: '200px' }}>
+                  <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, color: '#a6f36a', fontSize: '15px' }}>{o.order_id}</span>
+                  <span className="status-pill" style={{ background: st.bg, border: '1px solid ' + st.bd, color: st.fg, marginLeft: '9px' }}>{ST_LABEL[o.status] || o.status}</span>
+                  {dupe && <span className="status-pill" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', marginLeft: '6px' }}>Duplicate TrxID!</span>}
+                  <div style={{ fontWeight: 700, fontSize: '14.5px', marginTop: '6px' }}>{o.service_name}</div>
+                  <div style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '3px', lineHeight: 1.65 }}>
+                    {o.customer_name} • {o.whatsapp_number}{o.telegram_username ? ' • ' + o.telegram_username : ''}<br />
+                    ৳{o.price} • {o.payment_method || 'পেমেন্ট হয়নি'}{o.trx_id ? ' • TrxID: ' + o.trx_id : ''}<br />
+                    {o.created_at ? new Date(o.created_at).toLocaleString('bn-BD') : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+                  <select className="inp" style={{ padding: '9px 11px', fontSize: '13.5px', width: '150px' }} value={o.status} onChange={(e) => setStatus(o, e.target.value)}>
+                    {STATUSES.map((s) => <option key={s} value={s}>{ST_LABEL[s]}</option>)}
+                  </select>
+                  <a className="btn-ghost" style={{ padding: '8px 12px', fontSize: '12.5px', justifyContent: 'center' }} target="_blank" rel="noreferrer" href={`https://wa.me/${waNum(o.whatsapp_number)}`}>
+                    <Icon name="message" size={14} />WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <p style={{ color: 'var(--muted)' }}>কোনো অর্ডার নেই</p>}
+      </div>
+    </div>
+  );
+}
+
+function ProductsTab({ data, api, reload }) {
+  const [products, setProducts] = useState(data.products || []);
+  const [edit, setEdit] = useState(null);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { setProducts(data.products || []); }, [data]);
+
+  const save = async (list) => {
+    const d = await api('save-products', { products: list });
+    setMsg(d && d.ok ? 'সেভ হয়েছে' : 'সেভ হয়নি — আবার চেষ্টা করুন');
+    if (d && d.ok) reload();
+  };
+  const patch = (id, fields) => setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...fields } : p)));
+
+  const blank = { id: 'service-' + Date.now().toString().slice(-6), title: '', price: 0, oldPrice: 0, image: '', type: 'link', infoForm: false, published: true, featured: false, tagline: { bn: '', en: '' }, bullets: { bn: [], en: [] }, downloadFile: '', downloadName: '', downloadLimit: 3 };
+
+  return (
+    <div style={{ marginTop: '14px' }}>
+      <div style={{ display: 'flex', gap: '9px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn-lime" style={{ padding: '10px 17px', fontSize: '14px' }} onClick={() => setEdit({ ...blank })}><Icon name="plus" size={15} />নতুন প্রোডাক্ট</button>
+        <button className="btn-ghost" style={{ padding: '10px 16px', fontSize: '13.5px' }} onClick={() => save(products)}>সব সেভ করুন</button>
+        {msg && <span style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700 }}>{msg}</span>}
+      </div>
+      <div style={{ display: 'grid', gap: '11px', marginTop: '16px' }}>
+        {products.map((p) => (
+          <div key={p.id} className="glass" style={{ padding: '14px 16px', borderRadius: '15px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', opacity: p.published === false ? 0.55 : 1 }}>
+            <img src={p.image} alt="" style={{ width: '58px', height: '58px', borderRadius: '11px', objectFit: 'cover' }} />
+            <div style={{ flex: 1, minWidth: '170px' }}>
+              <div style={{ fontWeight: 800, fontSize: '14.5px' }}>{p.title || '(নাম নেই)'} {p.published === false && <span style={{ color: '#fca5a5', fontSize: '11px', fontWeight: 800 }}>HIDDEN</span>}</div>
+              <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '3px' }}>৳{p.price}{p.oldPrice > p.price ? ' • আগের ৳' + p.oldPrice : ''} • {p.type}{p.infoForm ? ' • তথ্য ফর্ম' : ''}</div>
+            </div>
+            <Toggle label="Published" on={p.published !== false} onClick={() => patch(p.id, { published: p.published === false ? true : false })} />
+            <Toggle label="Featured" on={!!p.featured} onClick={() => patch(p.id, { featured: !p.featured })} />
+            <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => setEdit(JSON.parse(JSON.stringify(p)))}><Icon name="edit" size={14} />এডিট</button>
+            <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => setProducts((prev) => prev.filter((x) => x.id !== p.id))}>
+              <Icon name="trash" size={15} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {edit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(3,5,8,0.78)', backdropFilter: 'blur(6px)', zIndex: 80, overflowY: 'auto', padding: '20px 12px' }} onClick={() => setEdit(null)}>
+          <div className="glass" style={{ maxWidth: '620px', margin: '0 auto', padding: '22px', borderRadius: '18px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 800, fontSize: '16.5px' }}>প্রোডাক্ট এডিট</div>
+              <button onClick={() => setEdit(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={20} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
+              <Field label="Slug / ID"><input className="inp" value={edit.id} onChange={(e) => setEdit({ ...edit, id: e.target.value })} /></Field>
+              <Field label="Title"><input className="inp" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <Field label="Price (৳)"><input className="inp" type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: Number(e.target.value) })} /></Field>
+                <Field label="Old price (৳)"><input className="inp" type="number" value={edit.oldPrice || 0} onChange={(e) => setEdit({ ...edit, oldPrice: Number(e.target.value) })} /></Field>
+              </div>
+              <Field label="Image URL / path"><input className="inp" value={edit.image} onChange={(e) => setEdit({ ...edit, image: e.target.value })} /></Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <Field label="ধরন (type)">
+                  <select className="inp" value={edit.type} onChange={(e) => setEdit({ ...edit, type: e.target.value })}>
+                    <option value="link">link (কার্ড/লিংক)</option>
+                    <option value="download">download (ফাইল)</option>
+                    <option value="text">text (fixed text)</option>
+                  </select>
+                </Field>
+                <Field label="তথ্য ফর্ম (checkout)">
+                  <select className="inp" value={edit.infoForm ? 'yes' : 'no'} onChange={(e) => setEdit({ ...edit, infoForm: e.target.value === 'yes' })}>
+                    <option value="no">না</option>
+                    <option value="yes">হ্যাঁ (birthday form)</option>
+                  </select>
+                </Field>
+              </div>
+              {edit.type === 'download' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                  <Field label="ফাইলের নাম (delivery-private)"><input className="inp" value={edit.downloadFile || ''} onChange={(e) => setEdit({ ...edit, downloadFile: e.target.value })} /></Field>
+                  <Field label="ডাউনলোড নাম"><input className="inp" value={edit.downloadName || ''} onChange={(e) => setEdit({ ...edit, downloadName: e.target.value })} /></Field>
+                  <Field label="লিমিট"><input className="inp" type="number" value={edit.downloadLimit || 3} onChange={(e) => setEdit({ ...edit, downloadLimit: Number(e.target.value) })} /></Field>
+                </div>
+              )}
+              <Field label="Tagline (বাংলা)"><input className="inp" value={edit.tagline?.bn || ''} onChange={(e) => setEdit({ ...edit, tagline: { ...edit.tagline, bn: e.target.value } })} /></Field>
+              <Field label="Tagline (English)"><input className="inp" value={edit.tagline?.en || ''} onChange={(e) => setEdit({ ...edit, tagline: { ...edit.tagline, en: e.target.value } })} /></Field>
+              <Field label="Bullets (বাংলা — প্রতি লাইনে একটা)"><textarea className="inp" rows={4} value={(edit.bullets?.bn || []).join('\n')} onChange={(e) => setEdit({ ...edit, bullets: { ...edit.bullets, bn: e.target.value.split('\n') } })} /></Field>
+              <Field label="Bullets (English — one per line)"><textarea className="inp" rows={4} value={(edit.bullets?.en || []).join('\n')} onChange={(e) => setEdit({ ...edit, bullets: { ...edit.bullets, en: e.target.value.split('\n') } })} /></Field>
+            </div>
+            <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '18px' }} onClick={() => {
+              setProducts((prev) => {
+                const exists = prev.some((x) => x.id === edit.id);
+                return exists ? prev.map((x) => (x.id === edit.id ? edit : x)) : [...prev, edit];
+              });
+              setEdit(null);
+            }}>তালিকায় রাখুন (পরে সব সেভ করুন)</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="lbl">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function Toggle({ label, on, onClick }) {
+  return (
+    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontFamily: 'inherit', fontSize: '12.5px', fontWeight: 700 }}>
+      <span style={{ width: '38px', height: '21px', borderRadius: '999px', background: on ? '#a6f36a' : '#334155', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+        <span style={{ position: 'absolute', top: '2.5px', left: on ? '19px' : '3px', width: '16px', height: '16px', borderRadius: '999px', background: '#fff', transition: 'left 0.2s' }} />
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function CouponsTab({ data, api, reload }) {
+  const [coupons, setCoupons] = useState(data.coupons || []);
+  const [code, setCode] = useState('');
+  const [percent, setPercent] = useState(10);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { setCoupons(data.coupons || []); }, [data]);
+  const save = async (list) => {
+    const d = await api('save-coupons', { coupons: list });
+    setMsg(d && d.ok ? 'সেভ হয়েছে' : 'সেভ হয়নি');
+    if (d && d.ok) reload();
+  };
+  return (
+    <div style={{ marginTop: '14px', maxWidth: '560px' }}>
+      <div className="glass" style={{ padding: '16px', borderRadius: '15px', display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+        <input className="inp" placeholder="কোড (যেমন NEW10)" value={code} onChange={(e) => setCode(e.target.value)} style={{ flex: 2, minWidth: '140px' }} />
+        <input className="inp" type="number" placeholder="%" value={percent} onChange={(e) => setPercent(Number(e.target.value))} style={{ flex: 1, minWidth: '70px' }} />
+        <button className="btn-lime" style={{ padding: '11px 18px', fontSize: '14px' }} onClick={() => {
+          if (!code.trim()) return;
+          const list = [...coupons, { code: code.trim().toUpperCase(), percent: Math.max(1, Math.min(90, percent || 0)), active: true }];
+          setCoupons(list); setCode(''); save(list);
+        }}><Icon name="plus" size={15} />যোগ করুন</button>
+      </div>
+      {msg && <p style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700, marginTop: '10px' }}>{msg}</p>}
+      <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+        {coupons.map((c, i) => (
+          <div key={i} className="glass" style={{ padding: '13px 16px', borderRadius: '13px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '15px', color: '#a6f36a' }}>{c.code}</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13.5px' }}>{c.percent}% ছাড়</span>
+            <span style={{ marginLeft: 'auto' }} />
+            <Toggle label={c.active === false ? 'বন্ধ' : 'চালু'} on={c.active !== false} onClick={() => { const list = coupons.map((x, j) => j === i ? { ...x, active: x.active === false ? true : false } : x); setCoupons(list); save(list); }} />
+            <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => { const list = coupons.filter((_, j) => j !== i); setCoupons(list); save(list); }}>
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        ))}
+        {coupons.length === 0 && <p style={{ color: 'var(--muted)' }}>কোনো কুপন নেই</p>}
+      </div>
+    </div>
+  );
+}
+
+function DeliveryTab({ data, api }) {
+  const [texts, setTexts] = useState({});
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    const init = {};
+    for (const p of data.products || []) init[p.id] = data.autodelivery && data.autodelivery[p.id] ? data.autodelivery[p.id].fixedText || '' : '';
+    setTexts(init);
+  }, [data]);
+  const save = async (pid) => {
+    const d = await api('save-autodelivery', { productId: pid, fixedText: texts[pid] || '' });
+    setMsg(d && d.ok ? 'সেভ হয়েছে' : 'সেভ হয়নি');
+  };
+  return (
+    <div style={{ marginTop: '14px', display: 'grid', gap: '13px', maxWidth: '640px' }}>
+      <p style={{ color: 'var(--muted)', fontSize: '13.5px', lineHeight: 1.7 }}>
+        কার্ড (link) প্রোডাক্টের ডেলিভারি অটো — অর্ডারের তথ্য থেকে লিংক তৈরি হয়। download প্রোডাক্টের ডেলিভারিও অটো — Track পেজে গেটেড ডাউনলোড বাটন। text ধরনের প্রোডাক্টের জন্য নিচে fixed text সেট করুন — completed অর্ডারে Track পেজে এটাই দেখাবে।
+      </p>
+      {(data.products || []).map((p) => (
+        <div key={p.id} className="glass" style={{ padding: '16px', borderRadius: '15px' }}>
+          <div style={{ fontWeight: 800, fontSize: '14.5px' }}>{p.title} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: '12.5px' }}>({p.type})</span></div>
+          <textarea className="inp" rows={3} style={{ marginTop: '10px', resize: 'vertical' }} placeholder="Fixed delivery text..." value={texts[p.id] || ''} onChange={(e) => setTexts({ ...texts, [p.id]: e.target.value })} />
+          <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '10px' }} onClick={() => save(p.id)}>সেভ করুন</button>
+        </div>
+      ))}
+      {msg && <p style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function ReviewsTab({ data, api, reload }) {
+  const products = data.products || [];
+  return (
+    <div style={{ marginTop: '14px', display: 'grid', gap: '18px' }}>
+      {products.map((p) => {
+        const list = (data.reviews && data.reviews[p.id]) || [];
+        return (
+          <div key={p.id}>
+            <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '9px' }}>{p.title} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: '12.5px' }}>({list.length} রিভিউ)</span></div>
+            <div style={{ display: 'grid', gap: '9px' }}>
+              {list.map((r, i) => (
+                <div key={i} className="glass" style={{ padding: '12px 15px', borderRadius: '13px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontWeight: 800, fontSize: '13.5px' }}>{r.name}</span>
+                    <span className="stars" style={{ marginLeft: '8px' }}>{'★'.repeat(r.rating || 5)}</span>
+                    <p style={{ color: '#cbd5e1', fontSize: '13.5px', marginTop: '4px', lineHeight: 1.6 }}>{r.text}</p>
+                  </div>
+                  <button aria-label="delete review" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={async () => { await api('delete-review', { productId: p.id, ts: r.ts }); reload(); }}>
+                    <Icon name="trash" size={13} />
+                  </button>
+                </div>
+              ))}
+              {list.length === 0 && <p style={{ color: 'var(--muted)', fontSize: '13px' }}>রিভিউ নেই</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CustomersTab({ data }) {
+  const map = useMemo(() => {
+    const m = {};
+    for (const o of data.orders || []) {
+      const k = last10(o.whatsapp_number);
+      if (!k) continue;
+      if (!m[k]) m[k] = { phone: o.whatsapp_number, name: o.customer_name, count: 0, spent: 0, last: o.created_at };
+      m[k].count += 1;
+      if (o.status === 'completed') m[k].spent += Number(o.price) || 0;
+      if (o.created_at > m[k].last) m[k].last = o.created_at;
+    }
+    return Object.values(m).sort((a, b) => b.spent - a.spent || b.count - a.count);
+  }, [data]);
+  const [q, setQ] = useState('');
+  const filtered = map.filter((c) => (c.name + c.phone).toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div style={{ marginTop: '14px', maxWidth: '640px' }}>
+      <input className="inp" placeholder="নাম বা নম্বর খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: '380px' }} />
+      <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+        {filtered.map((c) => (
+          <div key={c.phone} className="glass" style={{ padding: '13px 16px', borderRadius: '13px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '170px' }}>
+              <div style={{ fontWeight: 800, fontSize: '14.5px' }}>{c.name}</div>
+              <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '2px' }}>{c.phone} • {c.count} অর্ডার • শেষ: {c.last ? new Date(c.last).toLocaleDateString('bn-BD') : ''}</div>
+            </div>
+            <span style={{ fontWeight: 800, color: '#a6f36a', fontSize: '15px' }}>৳{c.spent}</span>
+            <a className="btn-ghost" style={{ padding: '8px 12px', fontSize: '12.5px' }} target="_blank" rel="noreferrer" href={'https://wa.me/' + waNum(c.phone)}><Icon name="message" size={14} />Chat</a>
+          </div>
+        ))}
+        {filtered.length === 0 && <p style={{ color: 'var(--muted)' }}>কাস্টমার নেই</p>}
+      </div>
+    </div>
+  );
+}
+
+function InsightsTab({ data }) {
+  const orders = data.orders || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const completed = orders.filter((o) => o.status === 'completed');
+  const revenue = completed.reduce((a, o) => a + (Number(o.price) || 0), 0);
+  const cards = [
+    ['মোট অর্ডার', orders.length, 'package'],
+    ['আজকের অর্ডার', orders.filter((o) => String(o.created_at || '').startsWith(today)).length, 'clock'],
+    ['পেন্ডিং', orders.filter((o) => o.status === 'pending').length, 'alert'],
+    ['মোট আয় (সম্পন্ন)', '৳' + revenue, 'chart'],
+    ['সম্পন্ন অর্ডার', completed.length, 'check'],
+    ['গড় অর্ডার মূল্য', completed.length ? '৳' + Math.round(revenue / completed.length) : '৳0', 'tag'],
+  ];
+  const byProduct = {};
+  for (const o of completed) byProduct[o.service_name] = (byProduct[o.service_name] || 0) + 1;
+  const top = Object.entries(byProduct).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  return (
+    <div style={{ marginTop: '14px' }}>
+      <div className="steps">
+        {cards.map(([label, val, icon]) => (
+          <div key={label} className="glass" style={{ padding: '19px' }}>
+            <span style={{ color: 'var(--accent)' }}><Icon name={icon} size={20} /></span>
+            <div style={{ fontWeight: 800, fontSize: '23px', marginTop: '9px', fontFamily: "'Manrope',sans-serif" }}>{val}</div>
+            <div style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '3px' }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      {top.length > 0 && (
+        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
+          <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>সেরা প্রোডাক্ট (বিক্রি)</div>
+          {top.map(([title, n]) => (
+            <div key={title} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '5px 0', color: '#cbd5e1' }}>
+              <span>{title}</span><span style={{ fontWeight: 800, color: '#a6f36a' }}>{n}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SettingsTab({ data, api, reload, setToken }) {
+  const [ann, setAnn] = useState(data.announcement || '');
+  const [methods, setMethods] = useState(data.payments ? data.payments.methods : []);
+  const [usdt, setUsdt] = useState(data.payments ? data.payments.usdtAddress : '');
+  const [rate, setRate] = useState(data.payments ? data.payments.usdtRate : 120);
+  const [newPin, setNewPin] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    setAnn(data.announcement || '');
+    if (data.payments) { setMethods(data.payments.methods); setUsdt(data.payments.usdtAddress); setRate(data.payments.usdtRate); }
+  }, [data]);
+
+  return (
+    <div style={{ marginTop: '14px', display: 'grid', gap: '16px', maxWidth: '620px' }}>
+      <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>ঘোষণা ব্যানার (Announcement)</div>
+        <input className="inp" value={ann} onChange={(e) => setAnn(e.target.value)} placeholder="যেমন: ঈদ অফার — সব সার্ভিসে ছাড়!" />
+        <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '11px' }} onClick={async () => { const d = await api('save-announcement', { text: ann }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); reload(); }}>সেভ করুন</button>
+      </div>
+
+      <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>পেমেন্ট নম্বর</div>
+        <div style={{ display: 'grid', gap: '10px' }}>
+          {methods.map((m, i) => (
+            <div key={m.id} style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+              <span style={{ width: '62px', fontWeight: 700, fontSize: '13.5px' }}>{m.label}</span>
+              <input className="inp" value={m.number} onChange={(e) => setMethods((prev) => prev.map((x, j) => j === i ? { ...x, number: e.target.value } : x))} />
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+            <span style={{ width: '62px', fontWeight: 700, fontSize: '13.5px' }}>USDT</span>
+            <input className="inp" value={usdt} onChange={(e) => setUsdt(e.target.value)} style={{ flex: 2 }} />
+            <input className="inp" type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} style={{ width: '86px' }} title="Rate ৳/$" />
+          </div>
+        </div>
+        <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '11px' }} onClick={async () => { const d = await api('save-payments', { methods, usdtAddress: usdt, usdtRate: rate }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); reload(); }}>সেভ করুন</button>
+      </div>
+
+      <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>Admin PIN পরিবর্তন</div>
+        <div style={{ display: 'flex', gap: '9px' }}>
+          <input className="inp" type="password" placeholder="নতুন PIN (কমপক্ষে 4 সংখ্যা)" value={newPin} onChange={(e) => setNewPin(e.target.value)} style={{ flex: 1 }} />
+          <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={async () => {
+            const d = await api('change-pin', { pin: newPin });
+            if (d && d.ok) { setToken(d.token); try { sessionStorage.setItem('tbcx_admin_token', d.token); } catch {} setMsg('PIN change হয়েছে'); }
+            else setMsg('PIN change হয়নি');
+          }}>Change</button>
+        </div>
+      </div>
+      {msg && <p style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700 }}>{msg}</p>}
+    </div>
+  );
+}

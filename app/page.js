@@ -1,13 +1,31 @@
 'use client';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { SERVICES } from '../lib/services';
 import { useLang } from '../components/LangContext';
 import Icon from '../components/icons';
-
-const offPct = (s) => (s.oldPrice > s.price ? Math.round((1 - s.price / s.oldPrice) * 100) : 0);
+import ProductCard from '../components/ProductCard';
 
 export default function HomePage() {
-  const { lang, t } = useLang();
+  const { t } = useLang();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((d) => { setProducts(d.products || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) => p.title.toLowerCase().includes(q));
+  }, [products, query]);
+
+  const featured = products.filter((p) => p.featured);
+
   return (
     <div className="wrap">
       {/* HERO */}
@@ -22,9 +40,19 @@ export default function HomePage() {
           <a href="#services" className="btn-lime"><Icon name="bolt" size={17} />{t.heroCta}</a>
           <a href="https://wa.me/8801319760720" target="_blank" rel="noreferrer" className="btn-ghost"><Icon name="message" size={17} />{t.heroCta2}</a>
         </div>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '34px' }}>
+        <div style={{ maxWidth: '520px', margin: '26px auto 0', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'inline-flex' }}><Icon name="search" size={18} /></span>
+          <input
+            className="inp"
+            style={{ paddingLeft: '44px', borderRadius: '999px', background: 'rgba(15,23,36,0.55)', backdropFilter: 'blur(14px)' }}
+            placeholder={t.searchPh}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '30px' }}>
           {[
-            [String(SERVICES.length) + '+', t.statServices],
+            [String(products.length) + '+', t.statServices],
             [t.statPaymentVal, t.statPayment],
             [t.statDeliveryVal, t.statDelivery],
           ].map(([v, l]) => (
@@ -37,32 +65,18 @@ export default function HomePage() {
       </section>
 
       {/* SERVICES */}
-      <section id="services" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
-        <h2 className="section-title">{t.servicesTitle}</h2>
+      <section id="services" style={{ padding: '52px 0 6px', scrollMarginTop: '80px' }}>
+        <h2 className="section-title">{query ? `${t.servicesTitle} — ${filtered.length}` : t.servicesTitle}</h2>
         <p className="section-sub">{t.servicesSub}</p>
-        <div className="svc-grid" style={{ marginTop: '24px' }}>
-          {SERVICES.map((s) => (
-            <Link key={s.slug} href={`/service/${s.slug}`} className="svc-card">
-              <div className="svc-media">
-                {offPct(s) > 0 && <span className="off-badge">-{offPct(s)}%</span>}
-                <img src={s.image} alt={s.title} loading="lazy" />
-              </div>
-              <div className="svc-body">
-                <div className="svc-title">{s.title}</div>
-                <p className="svc-tag">{s.tagline[lang] || s.tagline.bn}</p>
-                <div className="svc-bottom">
-                  <div>
-                    <span className="price">৳{s.price}</span>
-                    {s.oldPrice > s.price && <span className="old-price">৳{s.oldPrice}</span>}
-                  </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px' }}>
-                    {t.details}<Icon name="arrowRight" size={15} />
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {loading ? (
+          <p style={{ color: 'var(--muted)', marginTop: '22px' }}>{t.processing}</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ color: 'var(--muted)', marginTop: '22px' }}>{t.noResults}</p>
+        ) : (
+          <div className="svc-grid" style={{ marginTop: '24px' }}>
+            {filtered.map((p) => <ProductCard key={p.id} p={p} />)}
+          </div>
+        )}
       </section>
 
       {/* HOW IT WORKS */}

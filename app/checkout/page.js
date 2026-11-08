@@ -1,0 +1,199 @@
+'use client';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useLang } from '../../components/LangContext';
+import Icon from '../../components/icons';
+import LiquidSeg from '../../components/LiquidSeg';
+import { readCart, clearCart } from '../../lib/cart';
+import { RELATIONS, THEMES, REL_THEME } from '../../lib/birthday-shared';
+
+const REL_KEYS = { premika: 'relPremika', apu: 'relApu', junior: 'relJunior', friend: 'relFriend', vai: 'relVai' };
+const THEME_KEYS = { midnight: 'themeMidnight', candy: 'themeCandy', ocean: 'themeOcean' };
+
+function BdayForm({ t, value, onChange }) {
+  const set = (k, v) => onChange({ ...value, [k]: v });
+  const pickRel = (rel) => {
+    const next = { ...value, rel };
+    if (!value.themeTouched) next.theme = REL_THEME[rel] || 'midnight';
+    onChange(next);
+  };
+  return (
+    <div style={{ display: 'grid', gap: '13px' }}>
+      <div>
+        <label className="lbl">{t.bdayName} *</label>
+        <input className="inp" value={value.name || ''} onChange={(e) => set('name', e.target.value)} />
+      </div>
+      <div>
+        <label className="lbl">{t.bdayBirth} *</label>
+        <input className="inp" type="date" value={value.birth || ''} onChange={(e) => set('birth', e.target.value)} />
+      </div>
+      <div>
+        <label className="lbl">{t.bdayRel}</label>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {RELATIONS.map((r) => (
+            <button key={r} type="button" className={'rel-chip' + (value.rel === r ? ' on' : '')} onClick={() => pickRel(r)}>{t[REL_KEYS[r]]}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="lbl">{t.bdayTheme}</label>
+        <LiquidSeg
+          options={THEMES.map((th) => ({ value: th, label: t[THEME_KEYS[th]] }))}
+          value={value.theme || 'midnight'}
+          onChange={(v) => onChange({ ...value, theme: v, themeTouched: true })}
+          height={36}
+          fontSize={13}
+        />
+      </div>
+      <div>
+        <label className="lbl">{t.bdayPhoto}</label>
+        <input className="inp" value={value.photo || ''} onChange={(e) => set('photo', e.target.value)} placeholder="https://..." />
+      </div>
+      <div>
+        <label className="lbl">{t.bdayMsg}</label>
+        <textarea className="inp" rows={2} value={value.msg || ''} onChange={(e) => set('msg', e.target.value)} style={{ resize: 'vertical' }} />
+      </div>
+      <div>
+        <label className="lbl">{t.bdayFrom}</label>
+        <input className="inp" value={value.from || ''} onChange={(e) => set('from', e.target.value)} />
+      </div>
+    </div>
+  );
+}
+
+function CheckoutInner() {
+  const { t } = useLang();
+  const router = useRouter();
+  const sp = useSearchParams();
+  const buyId = sp.get('buy');
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [telegram, setTelegram] = useState('');
+  const [bday, setBday] = useState({});
+  const [errors, setErrors] = useState({});
+  const [placing, setPlacing] = useState(false);
+  const [fail, setFail] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+
+  useEffect(() => {
+    const ids = buyId ? [buyId] : readCart();
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((d) => {
+        const list = (d.products || []).filter((p) => ids.includes(p.id));
+        setItems(list);
+        const init = {};
+        for (const p of list) if (p.infoForm) init[p.id] = { name: '', birth: '', rel: 'friend', theme: 'ocean', photo: '', msg: '', from: '' };
+        setBday(init);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+    try {
+      const u = JSON.parse(localStorage.getItem('tbcx_user') || 'null');
+      if (u) { if (u.name) setName(u.name); if (u.phone) setPhone(u.phone); if (u.telegram) setTelegram(u.telegram); }
+      const c = localStorage.getItem('tbcx_coupon');
+      if (c) setCouponCode(c);
+    } catch {}
+  }, [buyId]);
+
+  const subtotal = useMemo(() => items.reduce((a, p) => a + p.price, 0), [items]);
+
+  const place = async () => {
+    const errs = {};
+    if (!name.trim()) errs.name = t.required;
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 11) errs.phone = t.phoneBad;
+    for (const p of items) {
+      if (p.infoForm) {
+        const b = bday[p.id] || {};
+        if (!b.name || !b.name.trim()) errs['bday_' + p.id] = t.required;
+        if (!b.birth) errs['bday_' + p.id] = t.required;
+      }
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    setPlacing(true);
+    setFail('');
+    try { localStorage.setItem('tbcx_user', JSON.stringify({ name, phone, telegram })); } catch {}
+    const res = await fetch('/api/order', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items.map((p) => p.id), name, phone, telegram, coupon: couponCode || undefined, bday }),
+    }).catch(() => null);
+    const d = res ? await res.json().catch(() => null) : null;
+    if (d && d.ok) {
+      try {
+        localStorage.setItem('tbcx_last_order', JSON.stringify({ ids: d.orders.map((o) => o.code), total: d.total, discount: d.discount, titles: d.orders.map((o) => o.title) }));
+        if (!buyId) clearCart();
+        localStorage.removeItem('tbcx_coupon');
+      } catch {}
+      router.push('/payment?orders=' + d.orders.map((o) => o.code).join(','));
+    } else {
+      setFail(t.errorGeneric);
+      setPlacing(false);
+    }
+  };
+
+  if (loading) return <div className="wrap" style={{ padding: '50px 0', color: 'var(--muted)' }}>{t.processing}</div>;
+  if (!items.length) return <div className="wrap" style={{ padding: '50px 0', color: 'var(--muted)' }}>{t.cartEmpty}</div>;
+
+  return (
+    <div className="wrap" style={{ padding: '28px 0 46px', maxWidth: '680px' }}>
+      <h1 className="section-title">{t.coTitle}</h1>
+
+      <div className="glass" style={{ padding: '18px', marginTop: '20px', borderRadius: '16px', display: 'grid', gap: '14px' }}>
+        <div>
+          <label className="lbl">{t.fName} *</label>
+          <input className="inp" placeholder={t.fNamePh} value={name} onChange={(e) => setName(e.target.value)} />
+          {errors.name && <p className="err">{errors.name}</p>}
+        </div>
+        <div>
+          <label className="lbl">{t.fPhone} *</label>
+          <input className="inp" placeholder={t.fPhonePh} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
+          {errors.phone && <p className="err">{errors.phone}</p>}
+        </div>
+        <div>
+          <label className="lbl">{t.fTelegram}</label>
+          <input className="inp" placeholder={t.fTelegramPh} value={telegram} onChange={(e) => setTelegram(e.target.value)} />
+        </div>
+      </div>
+
+      {items.filter((p) => p.infoForm).map((p) => (
+        <div key={p.id} className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px', borderColor: 'rgba(166,243,106,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '15.5px', marginBottom: '14px' }}>
+            <Icon name="gift" size={18} color="#a6f36a" />{t.bdayTitle} — {p.title}
+          </div>
+          <BdayForm t={t} value={bday[p.id] || {}} onChange={(v) => setBday((prev) => ({ ...prev, [p.id]: v }))} />
+          {errors['bday_' + p.id] && <p className="err">{errors['bday_' + p.id]}</p>}
+        </div>
+      ))}
+
+      <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px' }}>
+        {items.map((p) => (
+          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14.5px', padding: '5px 0', color: '#cbd5e1' }}>
+            <span>{p.title}</span><span style={{ fontWeight: 700 }}>৳{p.price}</span>
+          </div>
+        ))}
+        <div style={{ borderTop: '1px solid var(--line)', marginTop: '10px', paddingTop: '11px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16.5px' }}>
+          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{subtotal}</span>
+        </div>
+        <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '8px' }}>{couponCode ? `${t.discount}: ${couponCode}` : ''}</p>
+      </div>
+
+      {fail && <p className="err" style={{ marginTop: '12px' }}>{fail}</p>}
+      <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '18px' }} onClick={place} disabled={placing}>
+        <Icon name="lock" size={16} />{placing ? t.placing : t.placeOrder}
+      </button>
+    </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutInner />
+    </Suspense>
+  );
+}
