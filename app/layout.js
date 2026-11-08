@@ -105,7 +105,7 @@ function Footer() {
           <Link href="/guide" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.guideTitle}</Link>
           <Link href="/wishlist" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.wishTitle}</Link>
           <a href={"https://wa.me/" + storeWa} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#a6f36a', textDecoration: 'none', fontWeight: 700 }}>
-            <Icon name="message" size={16} /> WhatsApp: {storeWa}
+            <Icon name="message" size={16} /> WhatsApp: {storeWa.startsWith('880') ? '0' + storeWa.slice(3) : storeWa}
           </a>
         </div>
       </div>

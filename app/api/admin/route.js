@@ -66,10 +66,10 @@ export async function POST(req) {
     const storeCfg = parseJson(storeRaw, null);
     const reviews = {};
     const autodelivery = {};
-    for (const p of products) {
+    await Promise.all(products.map(async (p) => {
       reviews[p.id] = await getReviews(p.id);
       autodelivery[p.id] = parseJson(await fetchSetting('estore_autodelivery_' + p.id), null);
-    }
+    }));
     let searchLog = [];
     try {
       const slRes = await sbFetch('site_settings?key=like.estore_searchlog_*&select=value&limit=300');
@@ -90,6 +90,14 @@ export async function POST(req) {
       }
     } catch {}
     const topReferrers = Object.entries(referrers).map(([phone, n]) => ({ phone, n })).sort((a, b) => b.n - a.n).slice(0, 5);
+    const couponUsage = {};
+    try {
+      const cuRes = await sbFetch('site_settings?key=like.estore_ordidx_*&select=value&limit=400');
+      if (cuRes.ok) {
+        const rows = await cuRes.json().catch(() => []);
+        for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.coupon) couponUsage[v.coupon] = (couponUsage[v.coupon] || 0) + 1; }
+      }
+    } catch {}
     const bday = {};
     try {
       const bRes = await sbFetch('site_settings?key=like.estore_bday_*&select=key,value&order=key.desc&limit=400');
@@ -124,7 +132,7 @@ export async function POST(req) {
       }
     } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons, searchLog, referralCount, topReferrers, notes, bday, dlUsed,
+      ok: true, orders, products, coupons, searchLog, referralCount, topReferrers, couponUsage, notes, bday, dlUsed,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
       announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : '',
       storeWhatsapp: storeCfg && storeCfg.whatsapp ? String(storeCfg.whatsapp) : '8801319760720',

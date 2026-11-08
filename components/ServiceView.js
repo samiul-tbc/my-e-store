@@ -24,6 +24,7 @@ export default function ServicePage({ params }) {
   const [rText, setRText] = useState('');
   const [rRating, setRRating] = useState(5);
   const [rMsg, setRMsg] = useState('');
+  const [revSort, setRevSort] = useState('new');
   const [imgIdx, setImgIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
@@ -79,9 +80,13 @@ export default function ServicePage({ params }) {
 
   return (
     <div className="wrap" style={{ padding: '26px 0 120px' }}>
-      <Link href="/#services" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: 'var(--muted)', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}>
-        <Icon name="arrowLeft" size={16} />{t.backHome}
-      </Link>
+      <nav aria-label="breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--muted)', fontWeight: 600, fontSize: '13px', flexWrap: 'wrap' }}>
+        <Link href="/" style={{ color: 'var(--muted)', textDecoration: 'none' }}>{t.navHome}</Link>
+        <span>/</span>
+        <Link href="/#services" style={{ color: 'var(--muted)', textDecoration: 'none' }}>{t.navServices}</Link>
+        <span>/</span>
+        <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{p.title}</span>
+      </nav>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '26px', marginTop: '18px', alignItems: 'start' }}>
         <div>
@@ -159,12 +164,21 @@ export default function ServicePage({ params }) {
 
       {/* REVIEWS */}
       <section style={{ marginTop: '46px' }}>
-        <h2 className="section-title" style={{ fontSize: '24px' }}>{t.reviews} {reviews.length > 0 && `(${reviews.length})`}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h2 className="section-title" style={{ fontSize: '24px' }}>{t.reviews} {reviews.length > 0 && `(${reviews.length})`}</h2>
+          {reviews.length > 1 && (
+            <select className="inp" value={revSort} onChange={(e) => setRevSort(e.target.value)} style={{ width: 'auto', padding: '8px 11px', fontSize: '12.5px', borderRadius: '10px' }} aria-label="review sort">
+              <option value="new">Newest</option>
+              <option value="high">Highest</option>
+              <option value="low">Lowest</option>
+            </select>
+          )}
+        </div>
         {reviews.length === 0 ? (
           <p style={{ color: 'var(--muted)', marginTop: '12px', fontSize: '14.5px' }}>{t.noReviews}</p>
         ) : (
           <div style={{ display: 'grid', gap: '12px', marginTop: '18px' }}>
-            {reviews.map((r, i) => (
+            {[...reviews].sort((a, b) => revSort === 'high' ? (b.rating || 0) - (a.rating || 0) : revSort === 'low' ? (a.rating || 0) - (b.rating || 0) : (b.ts || 0) - (a.ts || 0)).map((r, i) => (
               <div key={i} className="glass" style={{ padding: '16px 18px', borderRadius: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 800, fontSize: '14.5px' }}>{r.name}</span>

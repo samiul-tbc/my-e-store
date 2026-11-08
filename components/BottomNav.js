@@ -23,8 +23,21 @@ export default function BottomNav() {
   const pillRef = useRef({ left: 0, width: 0, ready: false });
   const timerRef = useRef(null);
   const [cartN, setCartN] = useState(0);
+  const [navHidden, setNavHidden] = useState(false);
 
   const hidden = pathname && HIDE_ON.some((pre) => pathname === pre || pathname.startsWith(pre));
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setNavHidden(y > 340 && y > lastY + 4);
+      if (y < lastY - 4 || y < 340) setNavHidden(false);
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const sync = () => setCartN(readCart().length);
@@ -105,6 +118,8 @@ export default function BottomNav() {
         boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 18px 42px rgba(0, 0, 0, 0.5)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
         padding: '7px 8px', maxWidth: '520px', margin: '0 auto',
+        transform: navHidden ? 'translateY(130%)' : 'translateY(0)',
+        transition: 'transform 0.35s cubic-bezier(0.22, 0.9, 0.3, 1)',
       }}
     >
       <span

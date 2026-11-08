@@ -72,7 +72,7 @@ export async function POST(req) {
     if (!ins.ok) return NextResponse.json({ ok: false, error: 'db', detail: ins.text ? ins.text.slice(0, 200) : '' }, { status: 500 });
     created.push({ code, title: p.title, price: row.price, productId: p.id });
     // Index marker so admin + sold counts can find this store's orders.
-    await insertSettingVersion('estore_ordidx_' + code, { title: p.title, productId: p.id, phone10: last10(phone), ref: String(body.ref || '').replace(/\D/g, '').slice(-10) || undefined, ts: Date.now() });
+    await insertSettingVersion('estore_ordidx_' + code, { title: p.title, productId: p.id, phone10: last10(phone), ref: String(body.ref || '').replace(/\D/g, '').slice(-10) || undefined, coupon: coupon ? coupon.code : undefined, vip: vipUsed || undefined, ts: Date.now() });
     // Birthday payload for link-type products.
     if (p.infoForm && body.bday && body.bday[p.id]) {
       await insertSettingVersion('estore_bday_' + code, sanitizeBday(body.bday[p.id]));

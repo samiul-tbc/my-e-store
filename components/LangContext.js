@@ -12,6 +12,7 @@ export function LangProvider({ children }) {
       if (saved === 'en' || saved === 'bn') setLang(saved);
     } catch {}
   }, []);
+  useEffect(() => { document.documentElement.lang = lang === 'bn' ? 'bn' : 'en'; }, [lang]);
   const toggle = () => {
     setLang((prev) => {
       const next = prev === 'bn' ? 'en' : 'bn';

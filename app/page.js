@@ -12,10 +12,13 @@ export default function HomePage() {
   const storeWa = useStoreWa();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState([]);
   const [sort, setSort] = useState('default');
   const [searchFocus, setSearchFocus] = useState(false);
+  const [sugIdx, setSugIdx] = useState(-1);
   const [recentSearches, setRecentSearches] = useState([]);
   const [rotIdx, setRotIdx] = useState(0);
 
@@ -26,6 +29,7 @@ export default function HomePage() {
   }, [loading]);
 
   useEffect(() => {
+    setLoadErr(false);
     fetch('/api/products')
       .then((r) => r.json())
       .then((d) => {
@@ -35,8 +39,8 @@ export default function HomePage() {
         setRecent(list.filter((x) => rids.includes(x.id)).sort((a, b) => rids.indexOf(a.id) - rids.indexOf(b.id)));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => { setLoadErr(true); setLoading(false); });
+  }, [reloadKey]);
 
   useEffect(() => {
     try { setRecentSearches(JSON.parse(localStorage.getItem('tbcx_searches') || '[]')); } catch {}
@@ -110,11 +114,17 @@ export default function HomePage() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setSearchFocus(true)}
             onBlur={() => setTimeout(() => setSearchFocus(false), 180)}
+            onKeyDown={(e) => {
+              if (!suggestions.length) return;
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSugIdx((i) => Math.min(suggestions.length - 1, i + 1)); }
+              if (e.key === 'ArrowUp') { e.preventDefault(); setSugIdx((i) => Math.max(-1, i - 1)); }
+              if (e.key === 'Enter' && sugIdx >= 0 && suggestions[sugIdx]) window.location.href = '/service/' + suggestions[sugIdx].id;
+            }}
           />
           {searchFocus && suggestions.length > 0 && (
             <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 30, background: 'linear-gradient(180deg, rgba(20,28,44,0.92), rgba(10,14,22,0.9))', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '16px', backdropFilter: 'blur(20px)', overflow: 'hidden', textAlign: 'left', boxShadow: '0 20px 44px rgba(0,0,0,0.5)' }}>
-              {suggestions.map((p) => (
-                <a key={p.id} href={'/service/' + p.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '10px 13px', textDecoration: 'none', color: 'inherit', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              {suggestions.map((p, i) => (
+                <a key={p.id} href={'/service/' + p.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '10px 13px', textDecoration: 'none', color: 'inherit', borderBottom: '1px solid rgba(255,255,255,0.05)', background: i === sugIdx ? 'rgba(166,243,106,0.09)' : 'transparent' }}>
                   <img src={p.image} alt="" style={{ width: '38px', height: '38px', borderRadius: '9px', objectFit: 'cover' }} />
                   <span style={{ flex: 1, fontSize: '13.5px', fontWeight: 700, lineHeight: 1.35 }}>{p.title}</span>
                   <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px' }}>{'৳' + p.price}</span>
@@ -184,6 +194,13 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : loadErr ? (
+          <div style={{ marginTop: '22px' }}>
+            <p style={{ color: '#fca5a5', fontSize: '14.5px', fontWeight: 600 }}>{t.errorGeneric}</p>
+            <button className="btn-ghost" style={{ marginTop: '12px', padding: '10px 18px', fontSize: '13.5px' }} onClick={() => { setLoading(true); setReloadKey((k) => k + 1); }}>
+              <Icon name="refresh" size={15} />Retry
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <p style={{ color: 'var(--muted)', marginTop: '22px' }}>{t.noResults}</p>

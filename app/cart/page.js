@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import Icon from '../../components/icons';
-import { readCart, removeFromCart } from '../../lib/cart';
+import { readCart, removeFromCart, clearCart } from '../../lib/cart';
 import { fmtBdt } from '../../lib/format';
 import ProductCard from '../../components/ProductCard';
 
@@ -81,7 +81,10 @@ export default function CartPage() {
         </>
       ) : (
         <>
-          <div style={{ display: 'grid', gap: '12px', marginTop: '22px' }}>
+          <div style={{ textAlign: 'right', marginTop: '14px' }}>
+            <button onClick={() => { clearCart(); load(); }} style={{ background: 'none', border: 'none', color: '#fca5a5', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{t.remove} × {items.length}</button>
+          </div>
+          <div style={{ display: 'grid', gap: '12px', marginTop: '10px' }}>
             {items.map((p) => (
               <div key={p.id} className="glass" style={{ display: 'flex', gap: '14px', padding: '13px', borderRadius: '16px', alignItems: 'center' }}>
                 <img src={p.image} alt={p.title} style={{ width: '74px', height: '74px', objectFit: 'cover', borderRadius: '12px' }} />

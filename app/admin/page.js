@@ -142,7 +142,13 @@ export default function AdminPage() {
       </div>
 
       {!data ? (
-        <p style={{ color: 'var(--muted)', marginTop: '26px' }}>{loading ? 'লোড হচ্ছে...' : 'ডেটা লোড হয়নি — রিফ্রেশ চাপুন'}</p>
+        loading ? (
+          <div style={{ display: 'grid', gap: '11px', marginTop: '22px' }}>
+            {[1, 2, 3].map((i) => <div key={i} className="skel" style={{ height: '92px', borderRadius: '15px' }} />)}
+          </div>
+        ) : (
+          <p style={{ color: 'var(--muted)', marginTop: '26px' }}>ডেটা লোড হয়নি — রিফ্রেশ চাপুন</p>
+        )
       ) : (
         <>
           {tab === 'orders' && <OrdersTab data={data} api={api} reload={() => loadData()} />}
@@ -276,6 +282,7 @@ function OrdersTab({ data, api, reload }) {
                     {o.customer_name} • {o.whatsapp_number}{o.telegram_username ? ' • ' + o.telegram_username : ''}<br />
                     ৳{o.price} • {o.payment_method || 'পেমেন্ট হয়নি'}{o.trx_id ? ' • TrxID: ' + o.trx_id : ''}<br />
                     {o.created_at ? new Date(o.created_at).toLocaleString('bn-BD') : ''}
+                    {o.created_at && (() => { const mins = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000); const label = mins < 60 ? mins + ' মিনিট আগে' : mins < 1440 ? Math.floor(mins / 60) + ' ঘণ্টা আগে' : Math.floor(mins / 1440) + ' দিন আগে'; return <span style={{ color: '#94a3b8' }}> • {label}</span>; })()}
                   </div>
                   {data.notes && data.notes[o.order_id] && noteEdit !== o.order_id && (
                     <div style={{ marginTop: '7px', fontSize: '12.5px', color: '#fcd34d', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', padding: '6px 9px', borderRadius: '8px', maxWidth: '420px' }}>নোট: {data.notes[o.order_id]}</div>
@@ -370,6 +377,14 @@ function OrdersTab({ data, api, reload }) {
 function ProductsTab({ data, api, reload }) {
   const [products, setProducts] = useState(data.products || []);
   const [pq, setPq] = useState('');
+  const [soldMap, setSoldMap] = useState({});
+  useEffect(() => {
+    fetch('/api/products').then((r) => r.json()).then((d) => {
+      const m = {};
+      for (const p of d.products || []) m[p.id] = p.sold || 0;
+      setSoldMap(m);
+    }).catch(() => {});
+  }, []);
   const [edit, setEdit] = useState(null);
   const [msg, setMsg] = useState('');
   useEffect(() => { setProducts(data.products || []); }, [data]);
@@ -397,7 +412,7 @@ function ProductsTab({ data, api, reload }) {
             <img src={p.image} alt="" style={{ width: '58px', height: '58px', borderRadius: '11px', objectFit: 'cover' }} />
             <div style={{ flex: 1, minWidth: '170px' }}>
               <div style={{ fontWeight: 800, fontSize: '14.5px' }}>{p.title || '(নাম নেই)'} {p.published === false && <span style={{ color: '#fca5a5', fontSize: '11px', fontWeight: 800 }}>HIDDEN</span>}</div>
-              <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '3px' }}>৳{p.price}{p.oldPrice > p.price ? ' • আগের ৳' + p.oldPrice : ''} • {p.type}{p.infoForm ? ' • তথ্য ফর্ম' : ''}</div>
+              <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '3px' }}>৳{p.price}{p.oldPrice > p.price ? ' • আগের ৳' + p.oldPrice : ''} • {p.type}{p.infoForm ? ' • তথ্য ফর্ম' : ''}{(soldMap[p.id] || 0) > 0 ? ' • বিক্রি: ' + soldMap[p.id] : ''}</div>
             </div>
             <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px' }}>
               <button aria-label="move up" onClick={() => { const i = products.findIndex((x) => x.id === p.id); if (i > 0) { const next = [...products]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; setProducts(next); } }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: '#cbd5e1', borderRadius: '6px', width: '24px', height: '17px', cursor: 'pointer', fontSize: '10px', lineHeight: 1 }}>▲</button>
@@ -520,7 +535,7 @@ function CouponsTab({ data, api, reload }) {
         {coupons.map((c, i) => (
           <div key={i} className="glass" style={{ padding: '13px 16px', borderRadius: '13px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '15px', color: '#a6f36a' }}>{c.code}</span>
-            <span style={{ color: 'var(--muted)', fontSize: '13.5px' }}>{c.percent}% ছাড়{c.expiresAt ? ' • মেয়াদ: ' + c.expiresAt : ''}</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13.5px' }}>{c.percent}% ছাড়{c.expiresAt ? ' • মেয়াদ: ' + c.expiresAt : ''}{data.couponUsage && data.couponUsage[c.code] ? ' • ব্যবহার: ' + data.couponUsage[c.code] + ' বার' : ''}</span>
             <span style={{ marginLeft: 'auto' }} />
             <Toggle label={c.active === false ? 'বন্ধ' : 'চালু'} on={c.active !== false} onClick={() => { const list = coupons.map((x, j) => j === i ? { ...x, active: x.active === false ? true : false } : x); setCoupons(list); save(list); }} />
             <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => { const list = coupons.filter((_, j) => j !== i); setCoupons(list); save(list); }}>
