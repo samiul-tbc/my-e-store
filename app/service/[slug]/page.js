@@ -28,9 +28,19 @@ export default async function ServicePage({ params }) {
     offers: { '@type': 'Offer', priceCurrency: 'BDT', price: p.price, availability: 'https://schema.org/InStock' },
     brand: { '@type': 'Brand', name: 'TBC × E-store' },
   } : null;
+  const faqLd = p && Array.isArray(p.faqs) && p.faqs.length ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: p.faqs.map((f) => ({
+      '@type': 'Question',
+      name: (f.q && (f.q.en || f.q.bn)) || '',
+      acceptedAnswer: { '@type': 'Answer', text: (f.a && (f.a.en || f.a.bn)) || '' },
+    })),
+  } : null;
   return (
     <>
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
+      {faqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />}
       <ServiceView params={params} />
     </>
   );

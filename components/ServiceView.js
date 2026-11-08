@@ -118,6 +118,7 @@ export default function ServicePage({ params }) {
               {p.oldPrice > p.price && <span className="old-price" style={{ fontSize: '15px' }}>{fmtBdt(p.oldPrice, lang)}</span>}
               {off > 0 && <span style={{ marginLeft: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', fontSize: '12px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px' }}>-{off}%</span>}
             </div>
+            <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '5px' }}>≈ ${(p.price / 120).toFixed(2)} USD</div>
           </div>
 
           <p style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--muted)', fontSize: '13px', marginTop: '13px' }}>

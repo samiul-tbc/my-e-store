@@ -84,6 +84,9 @@ function CheckoutInner() {
   const [placing, setPlacing] = useState(false);
   const [fail, setFail] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [couponInput, setCouponInput] = useState('');
+  const [couponMsg, setCouponMsg] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
   const [vip, setVip] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [bumpId, setBumpId] = useState(null);
@@ -235,11 +238,26 @@ function CheckoutInner() {
           </div>
         )}
         <div style={{ borderTop: '1px solid var(--line)', marginTop: '10px', paddingTop: '11px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16.5px' }}>
-          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(subtotal - (vip && vip.available && !couponCode ? vip.discount : 0), lang)}</span>
+          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(subtotal - (couponCode ? couponDiscount : vip && vip.available ? vip.discount : 0), lang)}</span>
         </div>
         {vip && vip.available && !couponCode && <p style={{ color: '#a6f36a', fontSize: '12.5px', fontWeight: 700, marginTop: '7px' }}>{t.vipReady}</p>}
         {vip && !vip.available && vip.remaining > 0 && vip.completed > 0 && <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '7px' }}>{t.vipNext.replace('{n}', String(vip.remaining))}</p>}
-        <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '8px' }}>{couponCode ? `${t.discount}: ${couponCode}` : ''}</p>
+        {!couponCode ? (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input className="inp" placeholder={t.couponPh} value={couponInput} onChange={(e) => setCouponInput(e.target.value)} style={{ flex: 1, padding: '10px 13px', fontSize: '13.5px' }} />
+              <button type="button" className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={async () => {
+                const res = await fetch('/api/coupon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: couponInput, subtotal }) }).catch(() => null);
+                const d = res ? await res.json().catch(() => null) : null;
+                if (d && d.ok) { setCouponCode(d.code); setCouponDiscount(d.discount); setCouponMsg(t.couponOk); try { localStorage.setItem('tbcx_coupon', d.code); } catch {} }
+                else setCouponMsg(t.couponBad);
+              }}>{t.couponApply}</button>
+            </div>
+            {couponMsg && <p style={{ color: '#fca5a5', fontSize: '12.5px', fontWeight: 700, marginTop: '7px' }}>{couponMsg}</p>}
+          </div>
+        ) : (
+          <p style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700, marginTop: '10px' }}>{t.discount}: {couponCode} −{fmtBdt(couponDiscount, lang)}</p>
+        )}
       </div>
 
       {fail && <p className="err" style={{ marginTop: '12px' }}>{fail}</p>}

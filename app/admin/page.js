@@ -46,6 +46,24 @@ export default function AdminPage() {
     } catch {}
   }, [loadData]);
 
+  // Auto-refresh every 60s + pending count in the tab title + shortcuts.
+  useEffect(() => {
+    if (!token) return undefined;
+    const iv = setInterval(() => { if (!document.hidden) loadData(); }, 60000);
+    const onKey = (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+      if (e.key === 'r' || e.key === 'R') loadData();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { clearInterval(iv); window.removeEventListener('keydown', onKey); };
+  }, [token, loadData]);
+
+  useEffect(() => {
+    if (!data) return;
+    const pend = (data.orders || []).filter((o) => o.status === 'pending').length;
+    document.title = pend > 0 ? `(${pend}) Admin — TBC × E-store` : 'Admin — TBC × E-store';
+  }, [data]);
+
   const login = async () => {
     setAuthErr('');
     const res = await fetch('/api/admin', {
@@ -144,6 +162,7 @@ export default function AdminPage() {
 function OrdersTab({ data, api, reload }) {
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [todayOnly, setTodayOnly] = useState(false);
   const [tgMsg, setTgMsg] = useState('');
   const [selected, setSelected] = useState([]);
   const [bulkStatus, setBulkStatus] = useState('completed');
@@ -168,6 +187,7 @@ function OrdersTab({ data, api, reload }) {
   }
   void trxCount;
   const filtered = orders.filter((o) => {
+    if (todayOnly && !String(o.created_at || '').startsWith(new Date().toISOString().slice(0, 10))) return false;
     if (statusFilter !== 'all' && o.status !== statusFilter) return false;
     const str = (o.order_id + ' ' + o.customer_name + ' ' + o.whatsapp_number + ' ' + o.service_name + ' ' + (o.trx_id || '')).toLowerCase();
     return str.includes(q.toLowerCase());
@@ -210,6 +230,7 @@ function OrdersTab({ data, api, reload }) {
             {st === 'all' ? 'সব' : ST_LABEL[st]} ({st === 'all' ? orders.length : orders.filter((o) => o.status === st).length})
           </button>
         ))}
+        <button className={'admin-tab' + (todayOnly ? ' on' : '')} style={{ padding: '7px 13px', fontSize: '12.5px' }} onClick={() => setTodayOnly(!todayOnly)}>আজকের</button>
         <button className="btn-ghost" style={{ padding: '7px 13px', fontSize: '12.5px' }} onClick={async () => {
           const d = await api('test-telegram');
           setTgMsg(!d ? 'সার্ভার এরর' : !d.configured ? 'Telegram env (BOT_TOKEN/CHAT_ID) Vercel-এ set করা নেই' : d.ok ? 'Test alert পাঠানো হয়েছে' : 'পাঠানো যায়নি — টোকেন/চ্যাট আইডি চেক করুন');
@@ -348,6 +369,7 @@ function OrdersTab({ data, api, reload }) {
 
 function ProductsTab({ data, api, reload }) {
   const [products, setProducts] = useState(data.products || []);
+  const [pq, setPq] = useState('');
   const [edit, setEdit] = useState(null);
   const [msg, setMsg] = useState('');
   useEffect(() => { setProducts(data.products || []); }, [data]);
@@ -368,8 +390,9 @@ function ProductsTab({ data, api, reload }) {
         <button className="btn-ghost" style={{ padding: '10px 16px', fontSize: '13.5px' }} onClick={() => save(products)}>সব সেভ করুন</button>
         {msg && <span style={{ color: '#a6f36a', fontSize: '13px', fontWeight: 700 }}>{msg}</span>}
       </div>
-      <div style={{ display: 'grid', gap: '11px', marginTop: '16px' }}>
-        {products.map((p) => (
+      <input className="inp" placeholder="প্রোডাক্ট খুঁজুন..." value={pq} onChange={(e) => setPq(e.target.value)} style={{ maxWidth: '340px', marginTop: '14px' }} />
+      <div style={{ display: 'grid', gap: '11px', marginTop: '14px' }}>
+        {products.filter((p) => !pq || (p.title + ' ' + p.id).toLowerCase().includes(pq.toLowerCase())).map((p) => (
           <div key={p.id} className="glass" style={{ padding: '14px 16px', borderRadius: '15px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', opacity: p.published === false ? 0.55 : 1 }}>
             <img src={p.image} alt="" style={{ width: '58px', height: '58px', borderRadius: '11px', objectFit: 'cover' }} />
             <div style={{ flex: 1, minWidth: '170px' }}>
@@ -628,6 +651,13 @@ function CustomersTab({ data }) {
 
 function InsightsTab({ data }) {
   const searchLog = data.searchLog || [];
+  const health = [
+    ['প্রোডাক্ট লাইভ আছে', (data.products || []).some((p) => p.published !== false)],
+    ['ঘোষণা ব্যানার সেট', !!(data.announcement && data.announcement.trim())],
+    ['কমপক্ষে একটা কুপন', (data.coupons || []).length > 0],
+    ['Maintenance বন্ধ', !data.storeMaintenance],
+    ['পেমেন্ট নম্বর সেট', !!(data.payments && data.payments.methods && data.payments.methods[0] && data.payments.methods[0].number)],
+  ];
 
   const orders = data.orders || [];
   const today = new Date().toISOString().slice(0, 10);
@@ -655,6 +685,14 @@ function InsightsTab({ data }) {
   const top = Object.entries(byProduct).sort((a, b) => b[1] - a[1]).slice(0, 5);
   return (
     <div style={{ marginTop: '14px' }}>
+      <div className="glass" style={{ padding: '16px 18px', borderRadius: '15px', marginBottom: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontWeight: 800, fontSize: '14.5px' }}>সাইট হেলথ</span>
+        {health.map(([label, ok]) => (
+          <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: ok ? '#a6f36a' : '#fca5a5' }}>
+            <Icon name={ok ? 'check' : 'alert'} size={14} />{label}
+          </span>
+        ))}
+      </div>
       <div className="steps">
         {cards.map(([label, val, icon]) => (
           <div key={label} className="glass" style={{ padding: '19px' }}>

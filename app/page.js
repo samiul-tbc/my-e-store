@@ -17,6 +17,7 @@ export default function HomePage() {
   const [sort, setSort] = useState('default');
   const [searchFocus, setSearchFocus] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [rotIdx, setRotIdx] = useState(0);
 
   useEffect(() => {
     const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }, { threshold: 0.08 });
@@ -39,6 +40,11 @@ export default function HomePage() {
 
   useEffect(() => {
     try { setRecentSearches(JSON.parse(localStorage.getItem('tbcx_searches') || '[]')); } catch {}
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => setRotIdx((i) => i + 1), 2400);
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -83,6 +89,11 @@ export default function HomePage() {
         <h1 style={{ fontSize: 'clamp(32px, 6vw, 54px)', fontWeight: 800, lineHeight: 1.18, margin: '20px auto 0', maxWidth: '760px', fontFamily: "'Manrope','Hind Siliguri',sans-serif", letterSpacing: '-0.5px' }}>
           {t.heroTitleA}<br />
           <span style={{ background: 'linear-gradient(90deg,#b8f77e,#7ee2a8)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{t.heroTitleB}</span>
+          {products.length > 0 && (
+            <span key={rotIdx} className="page-in" style={{ display: 'block', fontSize: 'clamp(15px,2.6vw,19px)', color: 'var(--muted)', fontWeight: 700, marginTop: '10px', letterSpacing: '0.2px' }}>
+              {products[rotIdx % products.length].title} — {'৳' + products[rotIdx % products.length].price}
+            </span>
+          )}
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: 'clamp(15px,2.4vw,17.5px)', lineHeight: 1.75, maxWidth: '620px', margin: '18px auto 0' }}>{t.heroSub}</p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '28px' }}>

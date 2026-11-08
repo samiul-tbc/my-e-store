@@ -88,6 +88,14 @@ export default function ProfilePage() {
       <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
         <Link href="/track" className="btn-ghost" style={{ flex: 1, justifyContent: 'center', minWidth: '150px' }}><Icon name="package" size={16} />{t.trackTitle}</Link>
         <Link href="/wishlist" className="btn-ghost" style={{ flex: 1, justifyContent: 'center', minWidth: '150px' }}><Icon name="heart" size={16} />{t.wishTitle}{wishN > 0 ? ` (${num(wishN)})` : ''}</Link>
+        <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center', minWidth: '150px' }} onClick={() => {
+          const payload = JSON.stringify({ profile: user, orders, exportedAt: new Date().toISOString() }, null, 2);
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+          a.download = 'my-tbcx-data.json';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }}><Icon name="download" size={16} />JSON</button>
       </div>
 
       {refLink && (

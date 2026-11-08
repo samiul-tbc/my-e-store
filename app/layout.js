@@ -13,6 +13,7 @@ import RefCapture from '../components/RefCapture';
 import { useStoreWa } from '../components/useStoreWa';
 import PwaBanner from '../components/PwaBanner';
 import MaintenanceGate from '../components/MaintenanceGate';
+import ScrollProgress from '../components/ScrollProgress';
 import { readCart } from '../lib/cart';
 
 function AnnouncementBar() {
@@ -126,6 +127,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <LangProvider>
+          <ScrollProgress />
           <AnnouncementBar />
           <Header />
           <MaintenanceGate><main>{children}</main></MaintenanceGate>

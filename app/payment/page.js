@@ -64,6 +64,9 @@ function PaymentInner() {
         </div>
       )}
       <p style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '10px' }}>Order: {ids.join(', ')}</p>
+      {summary && summary.titles && (
+        <p style={{ color: '#cbd5e1', fontSize: '13.5px', marginTop: '5px', fontWeight: 600 }}>{summary.titles.join(' + ')}</p>
+      )}
 
       <div style={{ display: 'grid', gap: '10px', marginTop: '18px' }}>
         {(cfg ? cfg.methods : []).map((x) => (
