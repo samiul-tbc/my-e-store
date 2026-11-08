@@ -176,3 +176,8 @@ a { color: inherit; }
 
 .page-in { animation: page-in-anim 0.38s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
 @keyframes page-in-anim { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track, .page-in, .reveal { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+}

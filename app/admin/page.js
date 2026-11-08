@@ -95,6 +95,17 @@ export default function AdminPage() {
     <div className="wrap" style={{ padding: '24px 0 60px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, fontFamily: "'Manrope','Hind Siliguri',sans-serif" }}>TBC × E-store — Admin</h1>
+        {data && (() => {
+          const today = new Date().toISOString().slice(0, 10);
+          const rev = (data.orders || []).filter((o) => o.status === 'completed' && String(o.created_at || '').startsWith(today)).reduce((a, o) => a + (Number(o.price) || 0), 0);
+          const pend = (data.orders || []).filter((o) => o.status === 'pending').length;
+          return (
+            <span style={{ display: 'inline-flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(166,243,106,0.1)', border: '1px solid rgba(166,243,106,0.4)', color: '#a6f36a', fontSize: '12.5px', fontWeight: 800, padding: '7px 13px', borderRadius: '999px' }}>আজকের আয়: ৳{rev}</span>
+              {pend > 0 && <span style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.4)', color: '#fcd34d', fontSize: '12.5px', fontWeight: 800, padding: '7px 13px', borderRadius: '999px' }}>পেন্ডিং: {pend}</span>}
+            </span>
+          );
+        })()}
         <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={() => loadData()} disabled={loading}>
           <Icon name="refresh" size={15} />{loading ? 'লোড হচ্ছে...' : 'রিফ্রেশ'}
         </button>
@@ -696,6 +707,16 @@ function InsightsTab({ data }) {
           );
         })()}
       </div>
+      {data.topReferrers && data.topReferrers.length > 0 && (
+        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
+          <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>সেরা রেফারার</div>
+          {data.topReferrers.map((r) => (
+            <div key={r.phone} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '5px 0', color: '#cbd5e1' }}>
+              <span style={{ fontFamily: "'Manrope',monospace" }}>{r.phone}</span><span style={{ fontWeight: 800, color: '#a6f36a' }}>{r.n} অর্ডার</span>
+            </div>
+          ))}
+        </div>
+      )}
       {searchLog.length > 0 && (
         <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
           <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>কাস্টমার খুঁজে পায়নি (missed search)</div>
@@ -728,6 +749,7 @@ function SettingsTab({ data, api, reload, setToken }) {
   const [rate, setRate] = useState(data.payments ? data.payments.usdtRate : 120);
   const [newPin, setNewPin] = useState('');
   const [storeWa, setStoreWa] = useState(data.storeWhatsapp || '8801319760720');
+  const [maintenance, setMaintenance] = useState(!!data.storeMaintenance);
   const [msg, setMsg] = useState('');
   useEffect(() => {
     setAnn(data.announcement || '');
@@ -771,6 +793,38 @@ function SettingsTab({ data, api, reload, setToken }) {
           <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={async () => { const d = await api('save-store', { whatsapp: storeWa }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); }}>সেভ করুন</button>
         </div>
         <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '8px' }}>সব WhatsApp বাটন/লিংকে এই নম্বরটাই যাবে।</p>
+        <div style={{ borderTop: '1px solid var(--line)', marginTop: '14px', paddingTop: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '13.5px', fontWeight: 700 }}>Maintenance mode {maintenance ? '(চালু — কাস্টমার সাইট বন্ধ)' : '(বন্ধ)'}</span>
+          <Toggle label="" on={maintenance} onClick={async () => { const next = !maintenance; setMaintenance(next); await api('save-store', { maintenance: next }); }} />
+        </div>
+      </div>
+
+      <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>ব্যাকআপ (প্রোডাক্ট + কুপন)</div>
+        <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+          <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={() => {
+            const payload = JSON.stringify({ exportedAt: new Date().toISOString(), products: data.products, coupons: data.coupons }, null, 2);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+            a.download = 'estore-backup.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}><Icon name="download" size={14} />ব্যাকআপ ডাউনলোড</button>
+          <label className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', cursor: 'pointer' }}>
+            <Icon name="refresh" size={14} />ব্যাকআপ রিস্টোর
+            <input type="file" accept="application/json" style={{ display: 'none' }} onChange={async (e) => {
+              const f = e.target.files && e.target.files[0];
+              if (!f) return;
+              try {
+                const parsed = JSON.parse(await f.text());
+                if (Array.isArray(parsed.products)) await api('save-products', { products: parsed.products });
+                if (Array.isArray(parsed.coupons)) await api('save-coupons', { coupons: parsed.coupons });
+                setMsg('রিস্টোর হয়েছে');
+                reload();
+              } catch { setMsg('ফাইলটি পড়া যায়নি'); }
+            }} />
+          </label>
+        </div>
       </div>
 
       <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>

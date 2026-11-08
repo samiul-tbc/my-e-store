@@ -135,6 +135,11 @@ export default function ServicePage({ params }) {
             })}
           </div>
 
+          {p.demoUrl && (
+            <a href={p.demoUrl} target="_blank" rel="noreferrer" className="btn-ghost" style={{ padding: '10px 17px', fontSize: '13.5px', marginTop: '14px', marginRight: '10px' }}>
+              <Icon name="eye" size={15} />{t.demoBtn}
+            </a>
+          )}
           <a href={'https://wa.me/' + storeWa + '?text=' + encodeURIComponent(t.askQuestion + ': ' + p.title)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#4be07f', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', marginTop: '13px' }}>
             <Icon name="message" size={15} />{t.askQuestion}
           </a>

@@ -13,6 +13,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState('');
   const [wishN, setWishN] = useState(0);
+  const [refCopied, setRefCopied] = useState(false);
+  const refLink = user.phone && typeof window !== 'undefined' ? window.location.origin + '/?ref=' + user.phone.replace(/\D/g, '').slice(-10) : '';
 
   useEffect(() => {
     let u = null;
@@ -87,6 +89,19 @@ export default function ProfilePage() {
         <Link href="/track" className="btn-ghost" style={{ flex: 1, justifyContent: 'center', minWidth: '150px' }}><Icon name="package" size={16} />{t.trackTitle}</Link>
         <Link href="/wishlist" className="btn-ghost" style={{ flex: 1, justifyContent: 'center', minWidth: '150px' }}><Icon name="heart" size={16} />{t.wishTitle}{wishN > 0 ? ` (${num(wishN)})` : ''}</Link>
       </div>
+
+      {refLink && (
+        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px', borderColor: 'rgba(166,243,106,0.3)' }}>
+          <div style={{ fontWeight: 800, fontSize: '15.5px', display: 'flex', gap: '8px', alignItems: 'center' }}><Icon name="users" size={17} color="#a6f36a" />{t.refTitle}</div>
+          <p style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '6px', lineHeight: 1.65 }}>{t.refSub}</p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <input className="inp" readOnly value={refLink} style={{ flex: 1, fontSize: '13px' }} onFocus={(e) => e.target.select()} />
+            <button className="btn-lime" style={{ padding: '10px 16px', fontSize: '13.5px' }} onClick={async () => { try { await navigator.clipboard.writeText(refLink); setRefCopied(true); setTimeout(() => setRefCopied(false), 1600); } catch {} }}>
+              <Icon name={refCopied ? 'check' : 'copy'} size={14} />{refCopied ? t.payCopied : t.copyLink}
+            </button>
+          </div>
+        </div>
+      )}
 
       <h2 className="section-title" style={{ fontSize: '20px', marginTop: '30px' }}>{t.myOrders}</h2>
       {loading ? (

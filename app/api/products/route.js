@@ -60,6 +60,7 @@ export async function GET() {
       addedAt: p.addedAt || null,
       tagline: p.tagline,
       faqs: Array.isArray(p.faqs) ? p.faqs : [],
+      demoUrl: p.demoUrl || null,
       bullets: p.bullets,
       rating: stats.rating,
       reviewCount: stats.count,

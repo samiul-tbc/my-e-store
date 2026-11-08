@@ -59,7 +59,8 @@ export default function HomePage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = q ? products.filter((p) => p.title.toLowerCase().includes(q)) : [...products];
+    const matches = (p) => p.title.toLowerCase().includes(q) || ((p.tagline && ((p.tagline.bn || '') + ' ' + (p.tagline.en || '')).toLowerCase().includes(q)));
+    let list = q ? products.filter(matches) : [...products];
     if (sort === 'low') list.sort((a, b) => a.price - b.price);
     if (sort === 'high') list.sort((a, b) => b.price - a.price);
     if (sort === 'popular') list.sort((a, b) => (b.sold || 0) - (a.sold || 0));
@@ -69,7 +70,7 @@ export default function HomePage() {
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return products.filter((p) => p.title.toLowerCase().includes(q)).slice(0, 6);
+    return products.filter((p) => p.title.toLowerCase().includes(q) || ((p.tagline && ((p.tagline.bn || '') + ' ' + (p.tagline.en || '')).toLowerCase().includes(q)))).slice(0, 6);
   }, [products, query]);
 
   const featured = products.filter((p) => p.featured);

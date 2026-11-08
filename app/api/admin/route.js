@@ -9,6 +9,10 @@ import { birthdayLink } from '../../../lib/birthday';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Best-effort login throttle (per-instance memory): 6 failed PIN attempts
+// lock login for 10 minutes.
+const loginFails = { count: 0, lockedUntil: 0 };
+
 async function estoreOrderCodes() {
   const res = await sbFetch('site_settings?key=like.estore_ordidx_*&select=key&order=key.desc&limit=400');
   if (!res.ok) return [];
@@ -22,6 +26,7 @@ export async function POST(req) {
 
   // ---- login / first-time PIN setup ----
   if (action === 'login') {
+    if (Date.now() < loginFails.lockedUntil) return NextResponse.json({ ok: false, error: 'locked' }, { status: 429 });
     const pin = String(body.pin || '');
     if (pin.length < 4) return NextResponse.json({ ok: false, error: 'pin_short' }, { status: 400 });
     const existing = await getPinHash();
@@ -30,7 +35,9 @@ export async function POST(req) {
       const h = await getPinHash();
       return NextResponse.json({ ok: true, token: makeToken(h), first: true });
     }
-    if (hashPin(pin) === existing) return NextResponse.json({ ok: true, token: makeToken(existing) });
+    if (hashPin(pin) === existing) { loginFails.count = 0; return NextResponse.json({ ok: true, token: makeToken(existing) }); }
+    loginFails.count += 1;
+    if (loginFails.count >= 6) { loginFails.lockedUntil = Date.now() + 10 * 60000; loginFails.count = 0; }
     return NextResponse.json({ ok: false, error: 'pin_wrong' }, { status: 401 });
   }
 
@@ -74,13 +81,15 @@ export async function POST(req) {
       }
     } catch {}
     let referralCount = 0;
+    const referrers = {};
     try {
       const rfRes = await sbFetch('site_settings?key=like.estore_ordidx_*&select=value&limit=400');
       if (rfRes.ok) {
         const rows = await rfRes.json().catch(() => []);
-        for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.ref) referralCount += 1; }
+        for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.ref) { referralCount += 1; referrers[v.ref] = (referrers[v.ref] || 0) + 1; } }
       }
     } catch {}
+    const topReferrers = Object.entries(referrers).map(([phone, n]) => ({ phone, n })).sort((a, b) => b.n - a.n).slice(0, 5);
     const bday = {};
     try {
       const bRes = await sbFetch('site_settings?key=like.estore_bday_*&select=key,value&order=key.desc&limit=400');
@@ -115,10 +124,11 @@ export async function POST(req) {
       }
     } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons, searchLog, referralCount, notes, bday, dlUsed,
+      ok: true, orders, products, coupons, searchLog, referralCount, topReferrers, notes, bday, dlUsed,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
       announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : '',
       storeWhatsapp: storeCfg && storeCfg.whatsapp ? String(storeCfg.whatsapp) : '8801319760720',
+      storeMaintenance: !!(storeCfg && storeCfg.maintenance),
       payments, reviews, autodelivery,
     });
   }
@@ -167,7 +177,11 @@ export async function POST(req) {
   }
 
   if (action === 'save-store') {
-    const ok = await insertSettingVersion('estore_store', { whatsapp: String(body.whatsapp || '').replace(/\D/g, '').slice(0, 15) });
+    const prev = parseJson(await fetchSetting('estore_store'), null) || {};
+    const ok = await insertSettingVersion('estore_store', {
+      whatsapp: body.whatsapp != null ? String(body.whatsapp).replace(/\D/g, '').slice(0, 15) : prev.whatsapp || '8801319760720',
+      maintenance: body.maintenance != null ? !!body.maintenance : !!prev.maintenance,
+    });
     return NextResponse.json({ ok });
   }
 
