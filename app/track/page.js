@@ -123,6 +123,7 @@ function TrackInner() {
   const search = async (q) => {
     const v = (q != null ? q : query).trim();
     if (!v) return;
+    try { localStorage.setItem('tbcx_last_code', v); } catch {}
     setBusy(true);
     setSearchedByPhone(!/^ES-/i.test(v));
     const res = await fetch('/api/track?q=' + encodeURIComponent(v)).catch(() => null);
@@ -133,6 +134,10 @@ function TrackInner() {
 
   useEffect(() => {
     if (sp.get('q')) { search(sp.get('q')); return; }
+    try {
+      const last = localStorage.getItem('tbcx_last_code');
+      if (last) { setQuery(last); search(last); }
+    } catch {}
     try {
       const u = JSON.parse(localStorage.getItem('tbcx_user') || 'null');
       if (u && u.phone) { setQuery(u.phone); search(u.phone); }

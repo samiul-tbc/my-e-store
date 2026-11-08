@@ -157,7 +157,7 @@ export default function AdminPage() {
           {tab === 'delivery' && <DeliveryTab data={data} api={api} reload={() => loadData()} />}
           {tab === 'reviews' && <ReviewsTab data={data} api={api} reload={() => loadData()} />}
           {tab === 'customers' && <CustomersTab data={data} />}
-          {tab === 'insights' && <InsightsTab data={data} />}
+          {tab === 'insights' && <InsightsTab data={data} go={setTab} />}
           {tab === 'settings' && <SettingsTab data={data} api={api} reload={() => loadData()} setToken={setToken} />}
         </>
       )}
@@ -664,7 +664,7 @@ function CustomersTab({ data }) {
   );
 }
 
-function InsightsTab({ data }) {
+function InsightsTab({ data, go }) {
   const searchLog = data.searchLog || [];
   const [dbUp, setDbUp] = useState(null);
   useEffect(() => {
@@ -707,11 +707,14 @@ function InsightsTab({ data }) {
     <div style={{ marginTop: '14px' }}>
       <div className="glass" style={{ padding: '16px 18px', borderRadius: '15px', marginBottom: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontWeight: 800, fontSize: '14.5px' }}>সাইট হেলথ</span>
-        {health.map(([label, ok]) => (
-          <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: ok ? '#a6f36a' : '#fca5a5' }}>
-            <Icon name={ok ? 'check' : 'alert'} size={14} />{label}
-          </span>
-        ))}
+        {health.map(([label, ok]) => {
+          const target = !ok && label.includes('ঘোষণা') ? 'settings' : !ok && label.includes('কুপন') ? 'coupons' : null;
+          return (
+            <span key={label} onClick={() => { if (target && go) go(target); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700, color: ok ? '#a6f36a' : '#fca5a5', cursor: target ? 'pointer' : 'default', textDecoration: target ? 'underline' : 'none', textUnderlineOffset: '3px' }}>
+              <Icon name={ok ? 'check' : 'alert'} size={14} />{label}
+            </span>
+          );
+        })}
       </div>
       <div className="steps">
         {cards.map(([label, val, icon]) => (
