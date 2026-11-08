@@ -178,10 +178,12 @@ export default function HomePage() {
       <section id="faq" className="reveal" style={{ padding: '56px 0 6px', scrollMarginTop: '80px' }}>
         <h2 className="section-title">{t.faqTitle}</h2>
         <div style={{ display: 'grid', gap: '12px', marginTop: '24px' }}>
-          {[[t.q1, t.a1], [t.q2, t.a2], [t.q3, t.a3]].map(([q, a]) => (
+          {[[t.q1, t.a1], [t.q2, t.a2], [t.q3, t.a3]].map(([q, a], i) => (
             <div key={q} className="faq-item">
-              <div style={{ fontWeight: 800, fontSize: '15.5px' }}>{q}</div>
-              <p style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.7, marginTop: '6px' }}>{a}</p>
+              <details open={i === 0}>
+                <summary style={{ fontWeight: 800, fontSize: '15.5px' }}>{q}</summary>
+                <p style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.7, marginTop: '8px' }}>{a}</p>
+              </details>
             </div>
           ))}
         </div>

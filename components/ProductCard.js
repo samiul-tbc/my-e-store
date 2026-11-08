@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useLang } from './LangContext';
 import Icon from './icons';
 import WishHeart from './WishHeart';
+import { fmtBdt } from '../lib/format';
 
 export function Stars({ rating, count }) {
   const full = Math.round(rating || 0);
@@ -42,8 +43,8 @@ export default function ProductCard({ p }) {
         )}
         <div className="svc-bottom">
           <div>
-            <span className="price">৳{p.price}</span>
-            {p.oldPrice > p.price && <span className="old-price">৳{p.oldPrice}</span>}
+            <span className="price">{fmtBdt(p.price, lang)}</span>
+            {p.oldPrice > p.price && <span className="old-price">{fmtBdt(p.oldPrice, lang)}</span>}
           </div>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px' }}>
             {t.details}<Icon name="arrowRight" size={15} />

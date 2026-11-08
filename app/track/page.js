@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
+import { fmtBdt, bnDigits } from '../../lib/format';
 import Icon from '../../components/icons';
 
 const STATUS_STYLE = {
@@ -103,7 +104,7 @@ function DownloadBox({ t, order, searchedByPhone, query }) {
 }
 
 function TrackInner() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const sp = useSearchParams();
   const [query, setQuery] = useState(sp.get('q') || '');
   const [orders, setOrders] = useState(null);
@@ -157,7 +158,7 @@ function TrackInner() {
                   <div style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '16px', color: '#a6f36a' }}>{o.code}</div>
                   <div style={{ fontWeight: 700, fontSize: '14.5px', marginTop: '3px' }}>{o.title}</div>
                   <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '2px' }}>
-                    ৳{o.price}{o.paymentMethod ? ' • ' + o.paymentMethod : ''} • {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''}
+                    {fmtBdt(o.price, lang)}{o.paymentMethod ? ' • ' + o.paymentMethod : ''} • {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''}
                   </div>
                 </div>
                 <span className="status-pill" style={{ background: st.bg, border: '1px solid ' + st.bd, color: st.fg }}>{statusLabel(o.status)}</span>
@@ -192,6 +193,18 @@ function TrackInner() {
                   <Icon name="lock" size={13} />{t.bdayLocked}
                 </p>
               )}
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '4px' }}>
+                {o.productId && (
+                  <a href={'/checkout?buy=' + o.productId} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#a6f36a', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                    <Icon name="refresh" size={14} />{t.buyAgain}
+                  </a>
+                )}
+                {o.status !== 'completed' && (
+                  <a href={'https://wa.me/8801319760720?text=' + encodeURIComponent('আমার অর্ডার ' + o.code + ' (' + o.title + ') নিয়ে সাহায্য দরকার')} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                    <Icon name="message" size={14} />{t.needHelp}
+                  </a>
+                )}
+              </div>
             </div>
           );
         })}

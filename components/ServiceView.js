@@ -7,6 +7,7 @@ import Icon from './icons';
 import ProductCard, { Stars } from './ProductCard';
 import { addToCart } from '../lib/cart';
 import { pushRecent } from '../lib/personal';
+import { fmtBdt } from '../lib/format';
 
 export default function ServicePage({ params }) {
   const { lang, t } = useLang();
@@ -111,12 +112,15 @@ export default function ServicePage({ params }) {
           <div className="glass" style={{ padding: '18px', marginTop: '18px' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.5px' }}>{t.priceLabel}</div>
             <div style={{ marginTop: '5px' }}>
-              <span className="price" style={{ fontSize: '30px' }}>৳{p.price}</span>
-              {p.oldPrice > p.price && <span className="old-price" style={{ fontSize: '15px' }}>৳{p.oldPrice}</span>}
+              <span className="price" style={{ fontSize: '30px' }}>{fmtBdt(p.price, lang)}</span>
+              {p.oldPrice > p.price && <span className="old-price" style={{ fontSize: '15px' }}>{fmtBdt(p.oldPrice, lang)}</span>}
               {off > 0 && <span style={{ marginLeft: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', fontSize: '12px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px' }}>-{off}%</span>}
             </div>
           </div>
 
+          <p style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--muted)', fontSize: '13px', marginTop: '13px' }}>
+            <Icon name="clock" size={14} color="#a6f36a" />{t.deliveryTimeNote}
+          </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '16px' }}>
             <span style={{ color: 'var(--muted)', fontSize: '13px', fontWeight: 700, display: 'inline-flex', gap: '6px', alignItems: 'center' }}><Icon name="send" size={14} />{t.share}</span>
             {typeof window !== 'undefined' && ['whatsapp', 'telegram', 'facebook'].map((net) => {

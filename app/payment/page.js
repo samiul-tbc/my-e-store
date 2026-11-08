@@ -3,9 +3,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import Icon from '../../components/icons';
+import { fmtBdt } from '../../lib/format';
 
 function PaymentInner() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const router = useRouter();
   const sp = useSearchParams();
   const ids = (sp.get('orders') || '').split(',').filter(Boolean);
@@ -59,7 +60,7 @@ function PaymentInner() {
       <p className="section-sub">{t.paySub}</p>
       {total != null && (
         <div className="glass" style={{ padding: '15px 18px', marginTop: '18px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16px' }}>
-          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{total}</span>
+          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(total, lang)}</span>
         </div>
       )}
       <p style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '10px' }}>Order: {ids.join(', ')}</p>

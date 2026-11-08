@@ -5,15 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import Icon from '../../components/icons';
 import { readCart, removeFromCart } from '../../lib/cart';
+import { fmtBdt } from '../../lib/format';
+import ProductCard from '../../components/ProductCard';
 
 export default function CartPage() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [coupon, setCoupon] = useState('');
   const [couponState, setCouponState] = useState(null); // {code, percent, discount}
   const [couponMsg, setCouponMsg] = useState('');
+  const [featured, setFeatured] = useState([]);
 
   const load = () => {
     const ids = readCart();
@@ -22,6 +25,7 @@ export default function CartPage() {
       .then((d) => {
         const list = (d.products || []).filter((p) => ids.includes(p.id));
         setItems(list);
+        setFeatured((d.products || []).filter((p) => p.featured).slice(0, 4));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -67,6 +71,14 @@ export default function CartPage() {
           <p style={{ color: 'var(--muted)', fontSize: '14px', marginTop: '6px' }}>{t.cartEmptySub}</p>
           <Link href="/#services" className="btn-lime" style={{ marginTop: '18px' }}>{t.heroCta}</Link>
         </div>
+      ) : null}
+      {!loading && items.length === 0 && featured.length > 0 ? (
+        <>
+          <h2 className="section-title" style={{ fontSize: '21px', marginTop: '34px' }}>{t.featuredTitle}</h2>
+          <div className="svc-grid" style={{ marginTop: '18px' }}>
+            {featured.map((p) => <ProductCard key={p.id} p={p} />)}
+          </div>
+        </>
       ) : (
         <>
           <div style={{ display: 'grid', gap: '12px', marginTop: '22px' }}>
@@ -76,8 +88,8 @@ export default function CartPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: '14.5px', lineHeight: 1.4 }}>{p.title}</div>
                   <div style={{ marginTop: '4px' }}>
-                    <span className="price" style={{ fontSize: '17px' }}>৳{p.price}</span>
-                    {p.oldPrice > p.price && <span className="old-price">৳{p.oldPrice}</span>}
+                    <span className="price" style={{ fontSize: '17px' }}>{fmtBdt(p.price, lang)}</span>
+                    {p.oldPrice > p.price && <span className="old-price">{fmtBdt(p.oldPrice, lang)}</span>}
                   </div>
                 </div>
                 <button onClick={() => { removeFromCart(p.id); load(); }} aria-label={t.remove} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
@@ -94,9 +106,9 @@ export default function CartPage() {
             </div>
             {couponMsg && <p style={{ color: couponState ? '#a6f36a' : '#fca5a5', fontSize: '13px', fontWeight: 700, marginTop: '9px' }}>{couponMsg}</p>}
             <div style={{ borderTop: '1px solid var(--line)', marginTop: '15px', paddingTop: '14px', display: 'grid', gap: '8px', fontSize: '14.5px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--muted)' }}><span>{t.subtotal}</span><span>৳{subtotal}</span></div>
-              {couponState && <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a6f36a', fontWeight: 700 }}><span>{t.discount} ({couponState.code})</span><span>−৳{couponState.discount}</span></div>}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '17px' }}><span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{subtotal - (couponState ? couponState.discount : 0)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--muted)' }}><span>{t.subtotal}</span><span>{fmtBdt(subtotal, lang)}</span></div>
+              {couponState && <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a6f36a', fontWeight: 700 }}><span>{t.discount} ({couponState.code})</span><span>−{fmtBdt(couponState.discount, lang)}</span></div>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '17px' }}><span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(subtotal - (couponState ? couponState.discount : 0), lang)}</span></div>
             </div>
             <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '16px' }} onClick={() => router.push('/checkout')}>
               <Icon name="bolt" size={17} />{t.checkout}

@@ -63,7 +63,7 @@ function BdayForm({ t, value, onChange }) {
 }
 
 function CheckoutInner() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const router = useRouter();
   const sp = useSearchParams();
   const buyId = sp.get('buy');
@@ -87,7 +87,11 @@ function CheckoutInner() {
         const list = (d.products || []).filter((p) => ids.includes(p.id));
         setItems(list);
         const init = {};
-        for (const p of list) if (p.infoForm) init[p.id] = { name: '', birth: '', rel: 'friend', theme: 'ocean', photo: '', msg: '', from: '' };
+        for (const p of list) if (p.infoForm) {
+          let draft = null;
+          try { draft = JSON.parse(localStorage.getItem('tbcx_bday_' + p.id) || 'null'); } catch {}
+          init[p.id] = draft && typeof draft === 'object' ? { rel: 'friend', theme: 'ocean', ...draft } : { name: '', birth: '', rel: 'friend', theme: 'ocean', photo: '', msg: '', from: '' };
+        }
         setBday(init);
         setLoading(false);
       })
@@ -178,7 +182,7 @@ function CheckoutInner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '15.5px', marginBottom: '14px' }}>
             <Icon name="gift" size={18} color="#a6f36a" />{t.bdayTitle} — {p.title}
           </div>
-          <BdayForm t={t} value={bday[p.id] || {}} onChange={(v) => setBday((prev) => ({ ...prev, [p.id]: v }))} />
+          <BdayForm t={t} value={bday[p.id] || {}} onChange={(v) => { setBday((prev) => ({ ...prev, [p.id]: v })); try { localStorage.setItem('tbcx_bday_' + p.id, JSON.stringify(v)); } catch {} }} />
           {errors['bday_' + p.id] && <p className="err">{errors['bday_' + p.id]}</p>}
         </div>
       ))}
@@ -186,16 +190,16 @@ function CheckoutInner() {
       <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px' }}>
         {items.map((p) => (
           <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14.5px', padding: '5px 0', color: '#cbd5e1' }}>
-            <span>{p.title}</span><span style={{ fontWeight: 700 }}>৳{p.price}</span>
+            <span>{p.title}</span><span style={{ fontWeight: 700 }}>{fmtBdt(p.price, lang)}</span>
           </div>
         ))}
         {vip && vip.available && !couponCode && (
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '5px 0', color: '#a6f36a', fontWeight: 700 }}>
-            <span>{t.vipReward}</span><span>−৳{vip.discount}</span>
+            <span>{t.vipReward}</span><span>−{fmtBdt(vip.discount, lang)}</span>
           </div>
         )}
         <div style={{ borderTop: '1px solid var(--line)', marginTop: '10px', paddingTop: '11px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16.5px' }}>
-          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{subtotal - (vip && vip.available && !couponCode ? vip.discount : 0)}</span>
+          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(subtotal - (vip && vip.available && !couponCode ? vip.discount : 0), lang)}</span>
         </div>
         {vip && vip.available && !couponCode && <p style={{ color: '#a6f36a', fontSize: '12.5px', fontWeight: 700, marginTop: '7px' }}>{t.vipReady}</p>}
         {vip && !vip.available && vip.remaining > 0 && vip.completed > 0 && <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '7px' }}>{t.vipNext.replace('{n}', String(vip.remaining))}</p>}
@@ -206,6 +210,7 @@ function CheckoutInner() {
       <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '18px' }} onClick={place} disabled={placing}>
         <Icon name="lock" size={16} />{placing ? t.placing : t.placeOrder}
       </button>
+      <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '12.5px', marginTop: '11px' }}>{t.trustLine}</p>
     </div>
   );
 }
