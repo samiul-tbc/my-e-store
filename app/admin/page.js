@@ -666,7 +666,12 @@ function CustomersTab({ data }) {
 
 function InsightsTab({ data }) {
   const searchLog = data.searchLog || [];
+  const [dbUp, setDbUp] = useState(null);
+  useEffect(() => {
+    fetch('/api/health').then((r) => r.json()).then((d) => setDbUp(!!d.ok)).catch(() => setDbUp(false));
+  }, []);
   const health = [
+    ['ডাটাবেস লাইভ', dbUp !== false],
     ['প্রোডাক্ট লাইভ আছে', (data.products || []).some((p) => p.published !== false)],
     ['ঘোষণা ব্যানার সেট', !!(data.announcement && data.announcement.trim())],
     ['কমপক্ষে একটা কুপন', (data.coupons || []).length > 0],
