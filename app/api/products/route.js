@@ -36,11 +36,13 @@ async function soldCounts() {
 
 // Public catalogue + announcement + sold counts for the storefront.
 export async function GET() {
-  const [products, announcementRaw, sold] = await Promise.all([
+  const [products, announcementRaw, annMetaRaw, sold] = await Promise.all([
     getCatalogue(),
     fetchSetting('estore_announcement'),
+    fetchSetting('estore_announcement_meta'),
     soldCounts(),
   ]);
+  const annMeta = parseJson(annMetaRaw, null);
   const out = [];
   for (const p of products) {
     if (p.published === false) continue;
@@ -55,6 +57,7 @@ export async function GET() {
       type: p.type,
       infoForm: !!p.infoForm,
       featured: !!p.featured,
+      addedAt: p.addedAt || null,
       tagline: p.tagline,
       bullets: p.bullets,
       rating: stats.rating,
@@ -65,7 +68,7 @@ export async function GET() {
   }
   out.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
   return NextResponse.json(
-    { products: out, announcement: typeof announcementRaw === 'string' ? announcementRaw : '' },
+    { products: out, announcement: typeof announcementRaw === 'string' ? announcementRaw : '', announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : null },
     { headers: { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=40' } }
   );
 }

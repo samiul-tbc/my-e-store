@@ -9,20 +9,39 @@ import LiquidSeg from '../components/LiquidSeg';
 import BottomNav from '../components/BottomNav';
 import SwRegister from '../components/SwRegister';
 import WhatsFloat from '../components/WhatsFloat';
+import RefCapture from '../components/RefCapture';
 import { readCart } from '../lib/cart';
 
 function AnnouncementBar() {
   const [text, setText] = useState('');
+  const [endsAt, setEndsAt] = useState(null);
+  const [left, setLeft] = useState('');
   useEffect(() => {
     fetch('/api/products')
       .then((r) => r.json())
-      .then((d) => { if (d && d.announcement) setText(d.announcement); })
+      .then((d) => { if (d) { if (d.announcement) setText(d.announcement); if (d.announcementEndsAt) setEndsAt(d.announcementEndsAt); } })
       .catch(() => {});
   }, []);
+  useEffect(() => {
+    if (!endsAt) return undefined;
+    const tick = () => {
+      const ms = new Date(endsAt).getTime() - Date.now();
+      if (ms <= 0) { setLeft(''); return; }
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      setLeft((d > 0 ? d + 'd ' : '') + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'));
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [endsAt]);
   if (!text) return null;
   return (
     <div style={{ background: 'linear-gradient(90deg, rgba(166,243,106,0.16), rgba(166,243,106,0.07))', borderBottom: '1px solid rgba(166,243,106,0.25)', color: '#d9f99d', fontSize: '13px', fontWeight: 600, textAlign: 'center', padding: '8px 14px' }}>
       {text}
+      {left && <span style={{ marginLeft: '10px', background: 'rgba(7,10,14,0.55)', border: '1px solid rgba(166,243,106,0.4)', padding: '2px 9px', borderRadius: '999px', fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '12px' }}>{left}</span>}
     </div>
   );
 }
@@ -110,6 +129,7 @@ export default function RootLayout({ children }) {
           <WhatsFloat />
           <BottomNav />
           <SwRegister />
+          <RefCapture />
         </LangProvider>
       </body>
     </html>

@@ -132,6 +132,8 @@ export default function AdminPage() {
 
 function OrdersTab({ data, api, reload }) {
   const [q, setQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [tgMsg, setTgMsg] = useState('');
   const [notify, setNotify] = useState(null);
   const orders = data.orders || [];
   const trxCount = {};
@@ -144,8 +146,9 @@ function OrdersTab({ data, api, reload }) {
   }
   void trxCount;
   const filtered = orders.filter((o) => {
-    const s = (o.order_id + ' ' + o.customer_name + ' ' + o.whatsapp_number + ' ' + o.service_name + ' ' + (o.trx_id || '')).toLowerCase();
-    return s.includes(q.toLowerCase());
+    if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+    const str = (o.order_id + ' ' + o.customer_name + ' ' + o.whatsapp_number + ' ' + o.service_name + ' ' + (o.trx_id || '')).toLowerCase();
+    return str.includes(q.toLowerCase());
   });
 
   const setStatus = async (o, status) => {
@@ -178,6 +181,18 @@ function OrdersTab({ data, api, reload }) {
       <div style={{ position: 'relative', maxWidth: '420px' }}>
         <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'inline-flex' }}><Icon name="search" size={16} /></span>
         <input className="inp" style={{ paddingLeft: '40px' }} placeholder="Order ID, নাম, নম্বর, TrxID খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', marginTop: '13px' }}>
+        {['all', ...STATUSES].map((st) => (
+          <button key={st} className={'admin-tab' + (statusFilter === st ? ' on' : '')} style={{ padding: '7px 13px', fontSize: '12.5px' }} onClick={() => setStatusFilter(st)}>
+            {st === 'all' ? 'সব' : ST_LABEL[st]} ({st === 'all' ? orders.length : orders.filter((o) => o.status === st).length})
+          </button>
+        ))}
+        <button className="btn-ghost" style={{ padding: '7px 13px', fontSize: '12.5px' }} onClick={async () => {
+          const d = await api('test-telegram');
+          setTgMsg(!d ? 'সার্ভার এরর' : !d.configured ? 'Telegram env (BOT_TOKEN/CHAT_ID) Vercel-এ set করা নেই' : d.ok ? 'Test alert পাঠানো হয়েছে' : 'পাঠানো যায়নি — টোকেন/চ্যাট আইডি চেক করুন');
+        }}><Icon name="send" size={13} />Telegram Test</button>
+        {tgMsg && <span style={{ fontSize: '12.5px', color: 'var(--muted)', alignSelf: 'center' }}>{tgMsg}</span>}
       </div>
       <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '13px' }} onClick={() => {
         const rows = [['Order ID', 'Date', 'Customer', 'Phone', 'Service', 'Price', 'Method', 'TrxID', 'Status']];
@@ -494,9 +509,18 @@ function InsightsTab({ data }) {
     ['মোট আয় (সম্পন্ন)', '৳' + revenue, 'chart'],
     ['সম্পন্ন অর্ডার', completed.length, 'check'],
     ['গড় অর্ডার মূল্য', completed.length ? '৳' + Math.round(revenue / completed.length) : '৳0', 'tag'],
+    ['রেফারেল অর্ডার', data.referralCount || 0, 'users'],
   ];
   const byProduct = {};
   for (const o of completed) byProduct[o.service_name] = (byProduct[o.service_name] || 0) + 1;
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    const sum = completed.filter((o) => String(o.created_at || '').startsWith(key)).reduce((a, o) => a + (Number(o.price) || 0), 0);
+    days.push({ label: d.toLocaleDateString('bn-BD', { weekday: 'narrow' }), sum });
+  }
+  const maxDay = Math.max(1, ...days.map((d) => d.sum));
   const top = Object.entries(byProduct).sort((a, b) => b[1] - a[1]).slice(0, 5);
   return (
     <div style={{ marginTop: '14px' }}>
@@ -508,6 +532,18 @@ function InsightsTab({ data }) {
             <div style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '3px' }}>{label}</div>
           </div>
         ))}
+      </div>
+      <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '13px' }}>গত ৭ দিনের আয় (সম্পন্ন)</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '9px', height: '110px' }}>
+          {days.map((d, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '10.5px', color: 'var(--muted)', fontWeight: 700 }}>{d.sum ? '৳' + d.sum : ''}</span>
+              <div style={{ width: '100%', maxWidth: '34px', height: Math.max(4, Math.round((d.sum / maxDay) * 74)) + 'px', borderRadius: '7px 7px 3px 3px', background: 'linear-gradient(180deg,#b8f77e,#8fdd4e)' }} />
+              <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{d.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
       {searchLog.length > 0 && (
         <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
@@ -535,6 +571,7 @@ function InsightsTab({ data }) {
 
 function SettingsTab({ data, api, reload, setToken }) {
   const [ann, setAnn] = useState(data.announcement || '');
+  const [annEnd, setAnnEnd] = useState(data.announcementEndsAt ? String(data.announcementEndsAt).slice(0, 16) : '');
   const [methods, setMethods] = useState(data.payments ? data.payments.methods : []);
   const [usdt, setUsdt] = useState(data.payments ? data.payments.usdtAddress : '');
   const [rate, setRate] = useState(data.payments ? data.payments.usdtRate : 120);
@@ -550,7 +587,11 @@ function SettingsTab({ data, api, reload, setToken }) {
       <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
         <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>ঘোষণা ব্যানার (Announcement)</div>
         <input className="inp" value={ann} onChange={(e) => setAnn(e.target.value)} placeholder="যেমন: ঈদ অফার — সব সার্ভিসে ছাড়!" />
-        <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '11px' }} onClick={async () => { const d = await api('save-announcement', { text: ann }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); reload(); }}>সেভ করুন</button>
+        <div style={{ display: 'flex', gap: '9px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12.5px', color: 'var(--muted)', fontWeight: 700 }}>অফার শেষ (countdown):</span>
+          <input className="inp" type="datetime-local" value={annEnd} onChange={(e) => setAnnEnd(e.target.value)} style={{ width: '220px' }} />
+        </div>
+        <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '11px' }} onClick={async () => { const d = await api('save-announcement', { text: ann, endsAt: annEnd || null }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); reload(); }}>সেভ করুন</button>
       </div>
 
       <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>

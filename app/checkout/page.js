@@ -77,6 +77,7 @@ function CheckoutInner() {
   const [placing, setPlacing] = useState(false);
   const [fail, setFail] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [vip, setVip] = useState(null);
 
   useEffect(() => {
     const ids = buyId ? [buyId] : readCart();
@@ -101,6 +102,18 @@ function CheckoutInner() {
 
   const subtotal = useMemo(() => items.reduce((a, p) => a + p.price, 0), [items]);
 
+  useEffect(() => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 11 || subtotal <= 0) { setVip(null); return undefined; }
+    const tm = setTimeout(() => {
+      fetch('/api/vip-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, subtotal }) })
+        .then((r) => r.json())
+        .then((d) => { if (d && d.ok) setVip(d); })
+        .catch(() => {});
+    }, 600);
+    return () => clearTimeout(tm);
+  }, [phone, subtotal]);
+
   const place = async () => {
     const errs = {};
     if (!name.trim()) errs.name = t.required;
@@ -120,7 +133,7 @@ function CheckoutInner() {
     try { localStorage.setItem('tbcx_user', JSON.stringify({ name, phone, telegram })); } catch {}
     const res = await fetch('/api/order', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map((p) => p.id), name, phone, telegram, coupon: couponCode || undefined, bday }),
+      body: JSON.stringify({ items: items.map((p) => p.id), name, phone, telegram, coupon: couponCode || undefined, bday, ref: (() => { try { return localStorage.getItem('tbcx_ref') || undefined; } catch { return undefined; } })() }),
     }).catch(() => null);
     const d = res ? await res.json().catch(() => null) : null;
     if (d && d.ok) {
@@ -176,9 +189,16 @@ function CheckoutInner() {
             <span>{p.title}</span><span style={{ fontWeight: 700 }}>৳{p.price}</span>
           </div>
         ))}
+        {vip && vip.available && !couponCode && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '5px 0', color: '#a6f36a', fontWeight: 700 }}>
+            <span>{t.vipReward}</span><span>−৳{vip.discount}</span>
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--line)', marginTop: '10px', paddingTop: '11px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16.5px' }}>
-          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{subtotal}</span>
+          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>৳{subtotal - (vip && vip.available && !couponCode ? vip.discount : 0)}</span>
         </div>
+        {vip && vip.available && !couponCode && <p style={{ color: '#a6f36a', fontSize: '12.5px', fontWeight: 700, marginTop: '7px' }}>{t.vipReady}</p>}
+        {vip && !vip.available && vip.remaining > 0 && vip.completed > 0 && <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '7px' }}>{t.vipNext.replace('{n}', String(vip.remaining))}</p>}
         <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '8px' }}>{couponCode ? `${t.discount}: ${couponCode}` : ''}</p>
       </div>
 

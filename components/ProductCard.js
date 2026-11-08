@@ -21,11 +21,14 @@ export function Stars({ rating, count }) {
 export default function ProductCard({ p }) {
   const { lang, t } = useLang();
   const off = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+  const isNew = p.addedAt && (Date.now() - new Date(p.addedAt).getTime()) < 14 * 86400000;
+  const badge = p.sold >= 3 ? 'HOT' : isNew ? 'NEW' : null;
   return (
     <Link href={`/service/${p.id}`} className="svc-card">
       <div className="svc-media">
         {off > 0 && <span className="off-badge">-{off}%</span>}
         <WishHeart id={p.id} />
+        {badge && <span style={{ position: 'absolute', top: '10px', left: off > 0 ? '64px' : '10px', background: badge === 'HOT' ? 'rgba(239,68,68,0.9)' : 'rgba(56,189,248,0.9)', color: '#fff', fontSize: '10.5px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', letterSpacing: '0.6px' }}>{badge}</span>}
         <img src={p.image} alt={p.title} loading="lazy" />
       </div>
       <div className="svc-body">

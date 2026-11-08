@@ -45,13 +45,15 @@ export async function POST(req) {
 
   if (action === 'data') {
     const codes = await estoreOrderCodes();
-    const [orders, products, coupons, announcementRaw, payments] = await Promise.all([
+    const [orders, products, coupons, announcementRaw, payments, annMetaRaw] = await Promise.all([
       listOrdersByIds(codes),
       getCatalogue(),
       getCoupons(),
       fetchSetting('estore_announcement'),
       getPaymentConfig(),
+      fetchSetting('estore_announcement_meta'),
     ]);
+    const annMeta = parseJson(annMetaRaw, null);
     const reviews = {};
     const autodelivery = {};
     for (const p of products) {
@@ -68,9 +70,18 @@ export async function POST(req) {
         searchLog = Object.entries(counts).map(([q, n]) => ({ q, n })).sort((a, b) => b.n - a.n).slice(0, 20);
       }
     } catch {}
+    let referralCount = 0;
+    try {
+      const rfRes = await sbFetch('site_settings?key=like.estore_ordidx_*&select=value&limit=400');
+      if (rfRes.ok) {
+        const rows = await rfRes.json().catch(() => []);
+        for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.ref) referralCount += 1; }
+      }
+    } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons, searchLog,
+      ok: true, orders, products, coupons, searchLog, referralCount,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
+      announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : '',
       payments, reviews, autodelivery,
     });
   }
@@ -101,7 +112,21 @@ export async function POST(req) {
 
   if (action === 'save-announcement') {
     const ok = await insertSettingVersion('estore_announcement', String(body.text || '').slice(0, 200));
+    await insertSettingVersion('estore_announcement_meta', { endsAt: body.endsAt ? String(body.endsAt) : null });
     return NextResponse.json({ ok });
+  }
+
+  if (action === 'test-telegram') {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chat = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chat) return NextResponse.json({ ok: false, configured: false });
+    try {
+      const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text: '✅ Test alert — TBC × E-store admin' }),
+      });
+      return NextResponse.json({ ok: r.ok, configured: true });
+    } catch { return NextResponse.json({ ok: false, configured: true }); }
   }
 
   if (action === 'save-payments') {

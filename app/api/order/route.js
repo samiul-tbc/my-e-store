@@ -3,6 +3,7 @@ import { getCatalogue } from '../../../lib/catalog-server';
 import { validateCoupon } from '../../../lib/coupons-server';
 import { sanitizeBday } from '../../../lib/birthday';
 import { insertOrder, findOrderByCode, insertSettingVersion, sbFetch } from '../../../lib/supabase';
+import { getVipState } from '../../../lib/vip-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,16 @@ export async function POST(req) {
 
   const subtotal = items.reduce((a, p) => a + (Number(p.price) || 0), 0);
   const coupon = await validateCoupon(body.coupon, subtotal);
-  const totalDiscount = coupon ? coupon.discount : 0;
+  // VIP applies only when no coupon is used (coupons take precedence).
+  let vipUsed = false;
+  let totalDiscount = coupon ? coupon.discount : 0;
+  if (!coupon) {
+    const vip = await getVipState(phone);
+    if (vip.available && subtotal > 0) {
+      totalDiscount = Math.round((subtotal * vip.percent) / 100);
+      vipUsed = totalDiscount > 0;
+    }
+  }
 
   const created = [];
   let remainingDiscount = totalDiscount;
@@ -62,14 +72,29 @@ export async function POST(req) {
     if (!ins.ok) return NextResponse.json({ ok: false, error: 'db', detail: ins.text ? ins.text.slice(0, 200) : '' }, { status: 500 });
     created.push({ code, title: p.title, price: row.price, productId: p.id });
     // Index marker so admin + sold counts can find this store's orders.
-    await insertSettingVersion('estore_ordidx_' + code, { title: p.title, productId: p.id, phone10: last10(phone), ts: Date.now() });
+    await insertSettingVersion('estore_ordidx_' + code, { title: p.title, productId: p.id, phone10: last10(phone), ref: String(body.ref || '').replace(/\D/g, '').slice(-10) || undefined, ts: Date.now() });
     // Birthday payload for link-type products.
     if (p.infoForm && body.bday && body.bday[p.id]) {
       await insertSettingVersion('estore_bday_' + code, sanitizeBday(body.bday[p.id]));
     }
   }
+  if (vipUsed) await insertSettingVersion('estore_vip_used_' + last10(phone), { ts: Date.now(), orders: created.map((c) => c.code) });
+  // Telegram order alert (env-based; silent when not configured).
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chat = process.env.TELEGRAM_CHAT_ID;
+    if (token && chat) {
+      const lines = created.map((c) => `• ${c.code} — ${c.title} — ৳${c.price}`).join('\n');
+      const text = `🛍️ New order — TBC × E-store\n${lines}\nTotal: ৳${subtotal - totalDiscount}${totalDiscount ? ` (discount ৳${totalDiscount}${coupon ? ', coupon ' + coupon.code : ', VIP'})` : ''}\nName: ${name}\nPhone: ${phone}${telegram ? '\nTelegram: ' + telegram : ''}`;
+      await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text }),
+      });
+    }
+  } catch {}
   return NextResponse.json({
     ok: true,
+    vip: vipUsed,
     orders: created,
     subtotal,
     discount: totalDiscount,
