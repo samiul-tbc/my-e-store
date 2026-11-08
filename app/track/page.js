@@ -122,7 +122,11 @@ function TrackInner() {
   };
 
   useEffect(() => {
-    if (sp.get('q')) search(sp.get('q'));
+    if (sp.get('q')) { search(sp.get('q')); return; }
+    try {
+      const u = JSON.parse(localStorage.getItem('tbcx_user') || 'null');
+      if (u && u.phone) { setQuery(u.phone); search(u.phone); }
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -177,6 +181,11 @@ function TrackInner() {
                   <div style={{ fontWeight: 800, color: '#a6f36a', marginBottom: '7px' }}>{t.deliveryTitle}</div>
                   {o.delivery.text}
                 </div>
+              )}
+              {o.status === 'completed' && (
+                <a href={'/invoice/' + o.code} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', fontWeight: 700, textDecoration: 'none', marginTop: '12px' }}>
+                  <Icon name="doc" size={14} />{t.invoice}
+                </a>
               )}
               {o.status !== 'completed' && (
                 <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '12px', display: 'flex', gap: '6px', alignItems: 'center' }}>

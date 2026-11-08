@@ -78,6 +78,8 @@ function Footer() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
           <Link href="/track" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.trackTitle}</Link>
           <Link href="/#faq" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.navFaq}</Link>
+          <Link href="/guide" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.guideTitle}</Link>
+          <Link href="/wishlist" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.wishTitle}</Link>
           <a href="https://wa.me/8801319760720" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#a6f36a', textDecoration: 'none', fontWeight: 700 }}>
             <Icon name="message" size={16} /> WhatsApp: 01319-760720
           </a>

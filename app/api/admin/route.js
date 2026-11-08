@@ -58,8 +58,18 @@ export async function POST(req) {
       reviews[p.id] = await getReviews(p.id);
       autodelivery[p.id] = parseJson(await fetchSetting('estore_autodelivery_' + p.id), null);
     }
+    let searchLog = [];
+    try {
+      const slRes = await sbFetch('site_settings?key=like.estore_searchlog_*&select=value&limit=300');
+      if (slRes.ok) {
+        const rows = await slRes.json().catch(() => []);
+        const counts = {};
+        for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.q) counts[v.q] = (counts[v.q] || 0) + 1; }
+        searchLog = Object.entries(counts).map(([q, n]) => ({ q, n })).sort((a, b) => b.n - a.n).slice(0, 20);
+      }
+    } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons,
+      ok: true, orders, products, coupons, searchLog,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
       payments, reviews, autodelivery,
     });

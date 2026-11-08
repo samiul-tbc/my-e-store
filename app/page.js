@@ -32,6 +32,15 @@ export default function HomePage() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length >= 3 && !loading && products.length && !products.some((p) => p.title.toLowerCase().includes(q.toLowerCase()))) {
+      const key = 'tbcx_logged_' + q.toLowerCase();
+      try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch {}
+      fetch('/api/search-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }) }).catch(() => {});
+    }
+  }, [query, loading, products]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products;

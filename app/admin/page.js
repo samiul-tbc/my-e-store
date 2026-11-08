@@ -179,6 +179,16 @@ function OrdersTab({ data, api, reload }) {
         <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'inline-flex' }}><Icon name="search" size={16} /></span>
         <input className="inp" style={{ paddingLeft: '40px' }} placeholder="Order ID, নাম, নম্বর, TrxID খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
+      <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '13px' }} onClick={() => {
+        const rows = [['Order ID', 'Date', 'Customer', 'Phone', 'Service', 'Price', 'Method', 'TrxID', 'Status']];
+        for (const o of filtered) rows.push([o.order_id, o.created_at || '', o.customer_name, o.whatsapp_number, o.service_name, o.price, o.payment_method || '', o.trx_id || '', o.status]);
+        const csv = rows.map((r) => r.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        a.download = 'estore-orders.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }}><Icon name="download" size={15} />CSV এক্সপোর্ট</button>
       <div style={{ display: 'grid', gap: '11px', marginTop: '16px' }}>
         {filtered.map((o) => {
           const st = ST_STYLE[o.status] || ST_STYLE.pending;
@@ -336,6 +346,7 @@ function CouponsTab({ data, api, reload }) {
   const [coupons, setCoupons] = useState(data.coupons || []);
   const [code, setCode] = useState('');
   const [percent, setPercent] = useState(10);
+  const [expires, setExpires] = useState('');
   const [msg, setMsg] = useState('');
   useEffect(() => { setCoupons(data.coupons || []); }, [data]);
   const save = async (list) => {
@@ -348,9 +359,10 @@ function CouponsTab({ data, api, reload }) {
       <div className="glass" style={{ padding: '16px', borderRadius: '15px', display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
         <input className="inp" placeholder="কোড (যেমন NEW10)" value={code} onChange={(e) => setCode(e.target.value)} style={{ flex: 2, minWidth: '140px' }} />
         <input className="inp" type="number" placeholder="%" value={percent} onChange={(e) => setPercent(Number(e.target.value))} style={{ flex: 1, minWidth: '70px' }} />
+        <input className="inp" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} style={{ flex: 1, minWidth: '130px' }} title="মেয়াদ (যদি থাকে)" />
         <button className="btn-lime" style={{ padding: '11px 18px', fontSize: '14px' }} onClick={() => {
           if (!code.trim()) return;
-          const list = [...coupons, { code: code.trim().toUpperCase(), percent: Math.max(1, Math.min(90, percent || 0)), active: true }];
+          const list = [...coupons, { code: code.trim().toUpperCase(), percent: Math.max(1, Math.min(90, percent || 0)), active: true, expiresAt: expires || undefined }];
           setCoupons(list); setCode(''); save(list);
         }}><Icon name="plus" size={15} />যোগ করুন</button>
       </div>
@@ -359,7 +371,7 @@ function CouponsTab({ data, api, reload }) {
         {coupons.map((c, i) => (
           <div key={i} className="glass" style={{ padding: '13px 16px', borderRadius: '13px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '15px', color: '#a6f36a' }}>{c.code}</span>
-            <span style={{ color: 'var(--muted)', fontSize: '13.5px' }}>{c.percent}% ছাড়</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13.5px' }}>{c.percent}% ছাড়{c.expiresAt ? ' • মেয়াদ: ' + c.expiresAt : ''}</span>
             <span style={{ marginLeft: 'auto' }} />
             <Toggle label={c.active === false ? 'বন্ধ' : 'চালু'} on={c.active !== false} onClick={() => { const list = coupons.map((x, j) => j === i ? { ...x, active: x.active === false ? true : false } : x); setCoupons(list); save(list); }} />
             <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => { const list = coupons.filter((_, j) => j !== i); setCoupons(list); save(list); }}>
@@ -469,6 +481,8 @@ function CustomersTab({ data }) {
 }
 
 function InsightsTab({ data }) {
+  const searchLog = data.searchLog || [];
+
   const orders = data.orders || [];
   const today = new Date().toISOString().slice(0, 10);
   const completed = orders.filter((o) => o.status === 'completed');
@@ -495,6 +509,16 @@ function InsightsTab({ data }) {
           </div>
         ))}
       </div>
+      {searchLog.length > 0 && (
+        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
+          <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>কাস্টমার খুঁজে পায়নি (missed search)</div>
+          {searchLog.map((x) => (
+            <div key={x.q} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '5px 0', color: '#cbd5e1' }}>
+              <span>{x.q}</span><span style={{ fontWeight: 800, color: '#fca5a5' }}>{x.n} বার</span>
+            </div>
+          ))}
+        </div>
+      )}
       {top.length > 0 && (
         <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
           <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>সেরা প্রোডাক্ট (বিক্রি)</div>
