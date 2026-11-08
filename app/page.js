@@ -5,15 +5,18 @@ import { useLang } from '../components/LangContext';
 import Icon from '../components/icons';
 import ProductCard from '../components/ProductCard';
 import { readRecent } from '../lib/personal';
+import { useStoreWa } from '../components/useStoreWa';
 
 export default function HomePage() {
   const { t } = useLang();
+  const storeWa = useStoreWa();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState([]);
   const [sort, setSort] = useState('default');
   const [searchFocus, setSearchFocus] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
 
   useEffect(() => {
     const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }, { threshold: 0.08 });
@@ -35,7 +38,18 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    try { setRecentSearches(JSON.parse(localStorage.getItem('tbcx_searches') || '[]')); } catch {}
+  }, []);
+
+  useEffect(() => {
     const q = query.trim();
+    if (q.length >= 3 && !loading && products.length) {
+      try {
+        const prev = JSON.parse(localStorage.getItem('tbcx_searches') || '[]');
+        const next = [q, ...prev.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 5);
+        localStorage.setItem('tbcx_searches', JSON.stringify(next));
+      } catch {}
+    }
     if (q.length >= 3 && !loading && products.length && !products.some((p) => p.title.toLowerCase().includes(q.toLowerCase()))) {
       const key = 'tbcx_logged_' + q.toLowerCase();
       try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch {}
@@ -72,7 +86,7 @@ export default function HomePage() {
         <p style={{ color: 'var(--muted)', fontSize: 'clamp(15px,2.4vw,17.5px)', lineHeight: 1.75, maxWidth: '620px', margin: '18px auto 0' }}>{t.heroSub}</p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '28px' }}>
           <a href="#services" className="btn-lime"><Icon name="bolt" size={17} />{t.heroCta}</a>
-          <a href="https://wa.me/8801319760720" target="_blank" rel="noreferrer" className="btn-ghost"><Icon name="message" size={17} />{t.heroCta2}</a>
+          <a href={"https://wa.me/" + storeWa} target="_blank" rel="noreferrer" className="btn-ghost"><Icon name="message" size={17} />{t.heroCta2}</a>
         </div>
         <div style={{ maxWidth: '520px', margin: '26px auto 0', position: 'relative' }}>
           <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'inline-flex' }}><Icon name="search" size={18} /></span>
@@ -97,6 +111,15 @@ export default function HomePage() {
             </div>
           )}
         </div>
+        {!query && recentSearches.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
+            {recentSearches.map((q) => (
+              <button key={q} onClick={() => setQuery(q)} style={{ padding: '7px 14px', borderRadius: '999px', border: '1px solid var(--line)', background: 'rgba(255,255,255,0.03)', color: '#cbd5e1', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Icon name="clock" size={12} />{q}
+              </button>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '30px' }}>
           {[
             [String(products.length) + '+', t.statServices],
@@ -239,7 +262,7 @@ export default function HomePage() {
       <section className="glass" style={{ marginTop: '56px', padding: '34px 26px', textAlign: 'center', borderColor: 'rgba(166,243,106,0.3)' }}>
         <h2 style={{ fontSize: 'clamp(21px,3.6vw,28px)', fontWeight: 800, fontFamily: "'Manrope','Hind Siliguri',sans-serif" }}>{t.ctaTitle}</h2>
         <p style={{ color: 'var(--muted)', fontSize: '15px', marginTop: '9px', lineHeight: 1.7 }}>{t.ctaSub}</p>
-        <a href="https://wa.me/8801319760720" target="_blank" rel="noreferrer" className="btn-lime" style={{ marginTop: '20px' }}>
+        <a href={"https://wa.me/" + storeWa} target="_blank" rel="noreferrer" className="btn-lime" style={{ marginTop: '20px' }}>
           <Icon name="message" size={17} />{t.ctaBtn}
         </a>
       </section>

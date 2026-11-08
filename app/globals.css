@@ -173,3 +173,6 @@ a { color: inherit; }
 .marquee { display: flex; gap: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .marquee-track { display: flex; gap: 34px; padding-right: 34px; white-space: nowrap; animation: marquee-move 26s linear infinite; flex-shrink: 0; }
 @keyframes marquee-move { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+.page-in { animation: page-in-anim 0.38s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+@keyframes page-in-anim { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }

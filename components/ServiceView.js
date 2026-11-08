@@ -8,10 +8,12 @@ import ProductCard, { Stars } from './ProductCard';
 import { addToCart } from '../lib/cart';
 import { pushRecent } from '../lib/personal';
 import { fmtBdt } from '../lib/format';
+import { useStoreWa } from './useStoreWa';
 
 export default function ServicePage({ params }) {
   const { lang, t } = useLang();
   const router = useRouter();
+  const storeWa = useStoreWa();
   const id = params.slug;
   const [p, setP] = useState(null);
   const [all, setAll] = useState([]);
@@ -133,7 +135,7 @@ export default function ServicePage({ params }) {
             })}
           </div>
 
-          <a href={'https://wa.me/8801319760720?text=' + encodeURIComponent(t.askQuestion + ': ' + p.title)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#4be07f', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', marginTop: '13px' }}>
+          <a href={'https://wa.me/' + storeWa + '?text=' + encodeURIComponent(t.askQuestion + ': ' + p.title)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#4be07f', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', marginTop: '13px' }}>
             <Icon name="message" size={15} />{t.askQuestion}
           </a>
 
@@ -183,6 +185,22 @@ export default function ServicePage({ params }) {
           </button>
         </div>
       </section>
+
+      {p.faqs && p.faqs.length > 0 && (
+        <section style={{ marginTop: '42px' }}>
+          <h2 className="section-title" style={{ fontSize: '24px' }}>{t.faqTitle}</h2>
+          <div style={{ display: 'grid', gap: '11px', marginTop: '18px' }}>
+            {p.faqs.map((f, i) => (
+              <div key={i} className="faq-item">
+                <details>
+                  <summary style={{ fontWeight: 800, fontSize: '15px' }}>{(f.q && (f.q[lang] || f.q.bn)) || ''}</summary>
+                  <p style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.7, marginTop: '8px' }}>{(f.a && (f.a[lang] || f.a.bn)) || ''}</p>
+                </details>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* RELATED */}
       {related.length > 0 && (

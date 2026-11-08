@@ -1,16 +1,18 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import Icon from './icons';
+import { useStoreWa } from './useStoreWa';
 
 // Floating liquid-glass WhatsApp button (hidden on funnel/admin pages).
 const HIDE_ON = ['/admin', '/checkout', '/payment', '/order-success', '/service/'];
 
 export default function WhatsFloat() {
   const pathname = usePathname();
+  const storeWa = useStoreWa();
   if (pathname && HIDE_ON.some((p) => pathname === p || pathname.startsWith(p))) return null;
   return (
     <a
-      href="https://wa.me/8801319760720"
+      href={"https://wa.me/" + storeWa}
       target="_blank"
       rel="noreferrer"
       aria-label="WhatsApp"

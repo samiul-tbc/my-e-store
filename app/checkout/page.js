@@ -54,6 +54,13 @@ function BdayForm({ t, value, onChange }) {
         <label className="lbl">{t.bdayMsg}</label>
         <textarea className="inp" rows={2} value={value.msg || ''} onChange={(e) => set('msg', e.target.value)} style={{ resize: 'vertical' }} />
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+        {[['midnight', 'linear-gradient(135deg,#1e1b4b,#7c3aed)'], ['candy', 'linear-gradient(135deg,#ec4899,#f59e0b)'], ['ocean', 'linear-gradient(135deg,#0ea5e9,#22d3ee)']].map(([th, grad]) => (
+          <button key={th} type="button" onClick={() => onChange({ ...value, theme: th, themeTouched: true })} style={{ height: '38px', borderRadius: '11px', background: grad, border: value.theme === th ? '2px solid #a6f36a' : '2px solid rgba(255,255,255,0.15)', cursor: 'pointer', color: '#fff', fontSize: '11.5px', fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)', fontFamily: 'inherit' }}>
+            {t[THEME_KEYS[th]]}
+          </button>
+        ))}
+      </div>
       <div>
         <label className="lbl">{t.bdayFrom}</label>
         <input className="inp" value={value.from || ''} onChange={(e) => set('from', e.target.value)} />
@@ -176,6 +183,9 @@ function CheckoutInner() {
         <div>
           <label className="lbl">{t.fPhone} *</label>
           <input className="inp" placeholder={t.fPhonePh} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
+          {phone.replace(/\D/g, '').length >= 11 && !errors.phone && (
+            <p style={{ color: '#a6f36a', fontSize: '12.5px', fontWeight: 700, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="check" size={13} strokeWidth={3} />OK</p>
+          )}
           {errors.phone && <p className="err">{errors.phone}</p>}
         </div>
         <div>

@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import { fmtBdt, bnDigits } from '../../lib/format';
+import { useStoreWa } from '../../components/useStoreWa';
 import Icon from '../../components/icons';
 
 const STATUS_STYLE = {
@@ -105,6 +106,7 @@ function DownloadBox({ t, order, searchedByPhone, query }) {
 
 function TrackInner() {
   const { lang, t } = useLang();
+  const storeWa = useStoreWa();
   const sp = useSearchParams();
   const [query, setQuery] = useState(sp.get('q') || '');
   const [orders, setOrders] = useState(null);
@@ -132,6 +134,14 @@ function TrackInner() {
   }, []);
 
   const statusLabel = (s) => ({ pending: t.stPending, processing: t.stProcessing, completed: t.stCompleted, cancelled: t.stCancelled }[s] || s);
+
+  // Live status: quietly re-check every 30s while an order is in progress.
+  useEffect(() => {
+    if (!orders || !orders.some((o) => o.status === 'pending' || o.status === 'processing')) return undefined;
+    const iv = setInterval(() => { if (!document.hidden) search(); }, 30000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
 
   return (
     <div className="wrap" style={{ padding: '30px 0 46px', maxWidth: '680px' }}>
@@ -200,7 +210,7 @@ function TrackInner() {
                   </a>
                 )}
                 {o.status !== 'completed' && (
-                  <a href={'https://wa.me/8801319760720?text=' + encodeURIComponent('আমার অর্ডার ' + o.code + ' (' + o.title + ') নিয়ে সাহায্য দরকার')} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                  <a href={'https://wa.me/' + storeWa + '?text=' + encodeURIComponent('আমার অর্ডার ' + o.code + ' (' + o.title + ') নিয়ে সাহায্য দরকার')} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
                     <Icon name="message" size={14} />{t.needHelp}
                   </a>
                 )}

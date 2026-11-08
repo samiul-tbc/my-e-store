@@ -137,6 +137,7 @@ function OrdersTab({ data, api, reload }) {
   const [selected, setSelected] = useState([]);
   const [bulkStatus, setBulkStatus] = useState('completed');
   const [noteEdit, setNoteEdit] = useState(null);
+  const [drawer, setDrawer] = useState(null);
   const [noteText, setNoteText] = useState('');
   const toggleSel = (oid) => setSelected((prev) => prev.includes(oid) ? prev.filter((x) => x !== oid) : [...prev, oid]);
   const applyBulk = async () => {
@@ -265,6 +266,9 @@ function OrdersTab({ data, api, reload }) {
                   <a className="btn-ghost" style={{ padding: '8px 12px', fontSize: '12.5px', justifyContent: 'center' }} target="_blank" rel="noreferrer" href={`https://wa.me/${waNum(o.whatsapp_number)}`}>
                     <Icon name="message" size={14} />WhatsApp
                   </a>
+                  <button className="btn-ghost" style={{ padding: '8px 12px', fontSize: '12.5px', justifyContent: 'center' }} onClick={() => setDrawer(o)}>
+                    <Icon name="eye" size={14} />বিস্তারিত
+                  </button>
                 </div>
               </div>
             </div>
@@ -272,6 +276,61 @@ function OrdersTab({ data, api, reload }) {
         })}
         {filtered.length === 0 && <p style={{ color: 'var(--muted)' }}>কোনো অর্ডার নেই</p>}
       </div>
+
+      {drawer && (() => {
+        const o = drawer;
+        const bd = data.bday ? data.bday[o.order_id] : null;
+        const trackUrl = (typeof window !== 'undefined' ? window.location.origin : '') + '/track?q=' + o.order_id;
+        const resendMsg = o.status === 'completed'
+          ? `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name})-এর ডেলিভারি তৈরি।\nTrack: ${trackUrl}${bd ? '\nকার্ডের লিংক: ' + bd.link : ''}\n— TBC × E-store`
+          : `আসসালামু আলাইকুম ${o.customer_name}, আপনার অর্ডার ${o.order_id} (${o.service_name})-এর অবস্থা: ${ST_LABEL[o.status] || o.status}।\nTrack: ${trackUrl}\n— TBC × E-store`;
+        const row = (k, v) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '13.5px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{k}</span>
+            <span style={{ fontWeight: 700, textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+          </div>
+        );
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 85, background: 'rgba(3,5,8,0.7)', backdropFilter: 'blur(5px)' }} onClick={() => setDrawer(null)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 'min(430px, 94vw)', background: '#0c1119', borderLeft: '1px solid var(--line)', padding: '22px', overflowY: 'auto', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, color: '#a6f36a', fontSize: '17px' }}>{o.order_id}</span>
+                <button onClick={() => setDrawer(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={21} /></button>
+              </div>
+              <div style={{ marginTop: '14px' }}>
+                {row('কাস্টমার', o.customer_name)}
+                {row('WhatsApp', o.whatsapp_number)}
+                {o.telegram_username ? row('Telegram', o.telegram_username) : null}
+                {row('সার্ভিস', o.service_name)}
+                {row('মূল্য', '৳' + o.price)}
+                {row('পেমেন্ট', (o.payment_method || '—') + (o.trx_id ? ' • ' + o.trx_id : ''))}
+                {row('স্ট্যাটাস', ST_LABEL[o.status] || o.status)}
+                {row('তারিখ', o.created_at ? new Date(o.created_at).toLocaleString('bn-BD') : '—')}
+                {data.dlUsed && data.dlUsed[o.order_id] ? row('ডাউনলোড ব্যবহার', data.dlUsed[o.order_id] + ' বার') : null}
+                {data.notes && data.notes[o.order_id] ? row('নোট', data.notes[o.order_id]) : null}
+              </div>
+              {bd && (
+                <div style={{ marginTop: '16px', background: 'rgba(166,243,106,0.06)', border: '1px solid rgba(166,243,106,0.3)', borderRadius: '13px', padding: '14px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '14px', color: '#a6f36a', marginBottom: '9px' }}>বার্থডে কার্ডের তথ্য</div>
+                  {row('যার জন্মদিন', bd.payload.name || '—')}
+                  {row('জন্ম তারিখ', bd.payload.birth || '—')}
+                  {row('সম্পর্ক', bd.payload.rel || '—')}
+                  {row('থিম', bd.payload.theme || '—')}
+                  {row('প্রেরক', bd.payload.from || '—')}
+                  {bd.payload.msg ? row('বার্তা', bd.payload.msg) : null}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                    <a className="btn-lime" style={{ padding: '9px 15px', fontSize: '13px' }} href={bd.link} target="_blank" rel="noreferrer"><Icon name="external" size={14} />কার্ড খুলুন</a>
+                    <button className="btn-ghost" style={{ padding: '9px 13px', fontSize: '12.5px' }} onClick={() => { try { navigator.clipboard.writeText(bd.link); } catch {} }}><Icon name="copy" size={13} />লিংক কপি</button>
+                  </div>
+                </div>
+              )}
+              <a className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '16px' }} href={`https://wa.me/${waNum(o.whatsapp_number)}?text=${encodeURIComponent(resendMsg)}`} target="_blank" rel="noreferrer">
+                <Icon name="message" size={16} />WhatsApp-এ ডেলিভারি পাঠান
+              </a>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -313,6 +372,7 @@ function ProductsTab({ data, api, reload }) {
             <Toggle label="Published" on={p.published !== false} onClick={() => patch(p.id, { published: p.published === false ? true : false })} />
             <Toggle label="Featured" on={!!p.featured} onClick={() => patch(p.id, { featured: !p.featured })} />
             <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => setEdit(JSON.parse(JSON.stringify(p)))}><Icon name="edit" size={14} />এডিট</button>
+            <button className="btn-ghost" style={{ padding: '8px 11px', fontSize: '13px' }} title="ক্লোন" onClick={() => { const c = JSON.parse(JSON.stringify(p)); c.id = p.id + '-copy'; c.title = p.title + ' (Copy)'; c.published = false; setProducts((prev) => [...prev, c]); }}><Icon name="copy" size={14} /></button>
             <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => setProducts((prev) => prev.filter((x) => x.id !== p.id))}>
               <Icon name="trash" size={15} />
             </button>
@@ -517,7 +577,19 @@ function CustomersTab({ data }) {
   const filtered = map.filter((c) => (c.name + c.phone).toLowerCase().includes(q.toLowerCase()));
   return (
     <div style={{ marginTop: '14px', maxWidth: '640px' }}>
-      <input className="inp" placeholder="নাম বা নম্বর খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: '380px' }} />
+      <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+        <input className="inp" placeholder="নাম বা নম্বর খুঁজুন..." value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: '380px', flex: 1 }} />
+        <button className="btn-ghost" style={{ padding: '10px 15px', fontSize: '13px' }} onClick={() => {
+          const rows = [['Name', 'Phone', 'Orders', 'Completed spend', 'Last order']];
+          for (const c of map) rows.push([c.name, c.phone, c.count, c.spent, c.last || '']);
+          const csv = rows.map((r) => r.map((x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\n');
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+          a.download = 'estore-customers.csv';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }}><Icon name="download" size={14} />CSV</button>
+      </div>
       <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
         {filtered.map((c) => (
           <div key={c.phone} className="glass" style={{ padding: '13px 16px', borderRadius: '13px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -595,6 +667,35 @@ function InsightsTab({ data }) {
           ))}
         </div>
       </div>
+      <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px', display: 'flex', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
+        {(() => {
+          const total = Math.max(1, orders.length);
+          const seg = [['pending', '#fbbf24'], ['processing', '#38bdf8'], ['completed', '#a6f36a'], ['cancelled', '#ef4444']];
+          let acc = 0;
+          const parts = seg.map(([st, color]) => {
+            const n = orders.filter((o) => o.status === st).length;
+            const from = (acc / total) * 360;
+            acc += n;
+            const to = (acc / total) * 360;
+            return `${color} ${from}deg ${to}deg`;
+          }).join(', ');
+          return (
+            <>
+              <div style={{ width: '104px', height: '104px', borderRadius: '999px', background: `conic-gradient(${parts})`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <div style={{ width: '68px', height: '68px', borderRadius: '999px', background: '#0c1119', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: '19px', fontFamily: "'Manrope',sans-serif" }}>{orders.length}</div>
+              </div>
+              <div style={{ display: 'grid', gap: '7px' }}>
+                {seg.map(([st, color]) => (
+                  <span key={st} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700 }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: color }} />
+                    {ST_LABEL[st]} — {orders.filter((o) => o.status === st).length}
+                  </span>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </div>
       {searchLog.length > 0 && (
         <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '15px', maxWidth: '520px' }}>
           <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>কাস্টমার খুঁজে পায়নি (missed search)</div>
@@ -626,6 +727,7 @@ function SettingsTab({ data, api, reload, setToken }) {
   const [usdt, setUsdt] = useState(data.payments ? data.payments.usdtAddress : '');
   const [rate, setRate] = useState(data.payments ? data.payments.usdtRate : 120);
   const [newPin, setNewPin] = useState('');
+  const [storeWa, setStoreWa] = useState(data.storeWhatsapp || '8801319760720');
   const [msg, setMsg] = useState('');
   useEffect(() => {
     setAnn(data.announcement || '');
@@ -660,6 +762,15 @@ function SettingsTab({ data, api, reload, setToken }) {
           </div>
         </div>
         <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px', marginTop: '11px' }} onClick={async () => { const d = await api('save-payments', { methods, usdtAddress: usdt, usdtRate: rate }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); reload(); }}>সেভ করুন</button>
+      </div>
+
+      <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>
+        <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '11px' }}>দোকানের WhatsApp নম্বর</div>
+        <div style={{ display: 'flex', gap: '9px' }}>
+          <input className="inp" value={storeWa} onChange={(e) => setStoreWa(e.target.value)} placeholder="8801XXXXXXXXX" style={{ flex: 1 }} />
+          <button className="btn-ghost" style={{ padding: '9px 15px', fontSize: '13px' }} onClick={async () => { const d = await api('save-store', { whatsapp: storeWa }); setMsg(d && d.ok ? 'সেভ হয়েছে' : 'হয়নি'); }}>সেভ করুন</button>
+        </div>
+        <p style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '8px' }}>সব WhatsApp বাটন/লিংকে এই নম্বরটাই যাবে।</p>
       </div>
 
       <div className="glass" style={{ padding: '18px', borderRadius: '15px' }}>

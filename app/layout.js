@@ -10,6 +10,7 @@ import BottomNav from '../components/BottomNav';
 import SwRegister from '../components/SwRegister';
 import WhatsFloat from '../components/WhatsFloat';
 import RefCapture from '../components/RefCapture';
+import { useStoreWa } from '../components/useStoreWa';
 import PwaBanner from '../components/PwaBanner';
 import { readCart } from '../lib/cart';
 
@@ -87,6 +88,7 @@ function Header() {
 
 function Footer() {
   const { t } = useLang();
+  const storeWa = useStoreWa();
   return (
     <footer style={{ borderTop: '1px solid var(--line)', marginTop: '70px', padding: '30px 0 110px' }}>
       <div className="wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -100,8 +102,8 @@ function Footer() {
           <Link href="/#faq" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.navFaq}</Link>
           <Link href="/guide" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.guideTitle}</Link>
           <Link href="/wishlist" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 600 }}>{t.wishTitle}</Link>
-          <a href="https://wa.me/8801319760720" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#a6f36a', textDecoration: 'none', fontWeight: 700 }}>
-            <Icon name="message" size={16} /> WhatsApp: 01319-760720
+          <a href={"https://wa.me/" + storeWa} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#a6f36a', textDecoration: 'none', fontWeight: 700 }}>
+            <Icon name="message" size={16} /> WhatsApp: {storeWa}
           </a>
         </div>
       </div>

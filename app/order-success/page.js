@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import Icon from '../../components/icons';
+import Confetti from '../../components/Confetti';
 
 function SuccessInner() {
   const { t } = useLang();
@@ -11,6 +12,7 @@ function SuccessInner() {
   const ids = (sp.get('ids') || '').split(',').filter(Boolean);
   return (
     <div className="wrap" style={{ padding: '46px 0 60px', maxWidth: '560px', textAlign: 'center' }}>
+      <Confetti />
       <span style={{ width: '74px', height: '74px', borderRadius: '999px', background: 'rgba(166,243,106,0.12)', border: '1px solid rgba(166,243,106,0.45)', display: 'inline-grid', placeItems: 'center', color: '#a6f36a' }}>
         <Icon name="check" size={36} strokeWidth={2.6} />
       </span>

@@ -59,6 +59,7 @@ export async function GET() {
       featured: !!p.featured,
       addedAt: p.addedAt || null,
       tagline: p.tagline,
+      faqs: Array.isArray(p.faqs) ? p.faqs : [],
       bullets: p.bullets,
       rating: stats.rating,
       reviewCount: stats.count,

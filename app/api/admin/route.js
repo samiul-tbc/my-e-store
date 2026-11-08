@@ -4,6 +4,7 @@ import { fetchSetting, insertSettingVersion, parseJson, sbFetch, listOrdersByIds
 import { getCatalogue, getReviews } from '../../../lib/catalog-server';
 import { getCoupons } from '../../../lib/coupons-server';
 import { getPaymentConfig } from '../../../lib/payments';
+import { birthdayLink } from '../../../lib/birthday';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,15 +46,17 @@ export async function POST(req) {
 
   if (action === 'data') {
     const codes = await estoreOrderCodes();
-    const [orders, products, coupons, announcementRaw, payments, annMetaRaw] = await Promise.all([
+    const [orders, products, coupons, announcementRaw, payments, annMetaRaw, storeRaw] = await Promise.all([
       listOrdersByIds(codes),
       getCatalogue(),
       getCoupons(),
       fetchSetting('estore_announcement'),
       getPaymentConfig(),
       fetchSetting('estore_announcement_meta'),
+      fetchSetting('estore_store'),
     ]);
     const annMeta = parseJson(annMetaRaw, null);
+    const storeCfg = parseJson(storeRaw, null);
     const reviews = {};
     const autodelivery = {};
     for (const p of products) {
@@ -78,6 +81,28 @@ export async function POST(req) {
         for (const r of rows || []) { const v = parseJson(r.value, null); if (v && v.ref) referralCount += 1; }
       }
     } catch {}
+    const bday = {};
+    try {
+      const bRes = await sbFetch('site_settings?key=like.estore_bday_*&select=key,value&order=key.desc&limit=400');
+      if (bRes.ok) {
+        const rows = await bRes.json().catch(() => []);
+        for (const r of rows || []) {
+          const code = String(r.key).replace('estore_bday_', '').replace(/_\d+$/, '');
+          if (!(code in bday)) { const v = parseJson(r.value, null); if (v) bday[code] = { payload: v, link: birthdayLink(v) }; }
+        }
+      }
+    } catch {}
+    const dlUsed = {};
+    try {
+      const dRes = await sbFetch('site_settings?key=like.estore_dlcount_*&select=key&limit=500');
+      if (dRes.ok) {
+        const rows = await dRes.json().catch(() => []);
+        for (const r of rows || []) {
+          const code = String(r.key).replace('estore_dlcount_', '').replace(/_\d+$/, '');
+          dlUsed[code] = (dlUsed[code] || 0) + 1;
+        }
+      }
+    } catch {}
     const notes = {};
     try {
       const nRes = await sbFetch('site_settings?key=like.estore_note_*&select=key,value&order=key.desc&limit=400');
@@ -90,9 +115,10 @@ export async function POST(req) {
       }
     } catch {}
     return NextResponse.json({
-      ok: true, orders, products, coupons, searchLog, referralCount, notes,
+      ok: true, orders, products, coupons, searchLog, referralCount, notes, bday, dlUsed,
       announcement: typeof announcementRaw === 'string' ? announcementRaw : '',
       announcementEndsAt: annMeta && annMeta.endsAt ? annMeta.endsAt : '',
+      storeWhatsapp: storeCfg && storeCfg.whatsapp ? String(storeCfg.whatsapp) : '8801319760720',
       payments, reviews, autodelivery,
     });
   }
@@ -138,6 +164,11 @@ export async function POST(req) {
       });
       return NextResponse.json({ ok: r.ok, configured: true });
     } catch { return NextResponse.json({ ok: false, configured: true }); }
+  }
+
+  if (action === 'save-store') {
+    const ok = await insertSettingVersion('estore_store', { whatsapp: String(body.whatsapp || '').replace(/\D/g, '').slice(0, 15) });
+    return NextResponse.json({ ok });
   }
 
   if (action === 'save-payments') {
