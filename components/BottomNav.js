@@ -36,6 +36,7 @@ export default function BottomNav() {
     { key: 'home', name: t.navHome, href: '/', icon: 'home' },
     { key: 'track', name: t.navTrack, href: '/track', icon: 'doc' },
     { key: 'cart', name: t.navCart, href: '/cart', icon: 'cart', badge: cartN },
+    { key: 'profile', name: t.profileTitle.replace('আমার ', '').replace('My ', ''), href: '/profile', icon: 'users' },
   ];
   const activeItem = navItems.find((i) => i.href === pathname);
 

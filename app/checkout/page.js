@@ -78,6 +78,8 @@ function CheckoutInner() {
   const [fail, setFail] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [vip, setVip] = useState(null);
+  const [allProducts, setAllProducts] = useState([]);
+  const [bumpId, setBumpId] = useState(null);
 
   useEffect(() => {
     const ids = buyId ? [buyId] : readCart();
@@ -86,6 +88,7 @@ function CheckoutInner() {
       .then((d) => {
         const list = (d.products || []).filter((p) => ids.includes(p.id));
         setItems(list);
+        setAllProducts(d.products || []);
         const init = {};
         for (const p of list) if (p.infoForm) {
           let draft = null;
@@ -104,7 +107,11 @@ function CheckoutInner() {
     } catch {}
   }, [buyId]);
 
-  const subtotal = useMemo(() => items.reduce((a, p) => a + p.price, 0), [items]);
+  const bumpProduct = useMemo(() => {
+    if (items.length === 0) return null;
+    return allProducts.find((p) => !items.some((i) => i.id === p.id) && !p.infoForm) || null;
+  }, [allProducts, items]);
+  const subtotal = useMemo(() => items.reduce((a, p) => a + p.price, 0) + (bumpId && bumpProduct ? bumpProduct.price : 0), [items, bumpId, bumpProduct]);
 
   useEffect(() => {
     const digits = phone.replace(/\D/g, '');
@@ -137,7 +144,7 @@ function CheckoutInner() {
     try { localStorage.setItem('tbcx_user', JSON.stringify({ name, phone, telegram })); } catch {}
     const res = await fetch('/api/order', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map((p) => p.id), name, phone, telegram, coupon: couponCode || undefined, bday, ref: (() => { try { return localStorage.getItem('tbcx_ref') || undefined; } catch { return undefined; } })() }),
+      body: JSON.stringify({ items: [...items.map((p) => p.id), ...(bumpId && bumpProduct ? [bumpProduct.id] : [])], name, phone, telegram, coupon: couponCode || undefined, bday, ref: (() => { try { return localStorage.getItem('tbcx_ref') || undefined; } catch { return undefined; } })() }),
     }).catch(() => null);
     const d = res ? await res.json().catch(() => null) : null;
     if (d && d.ok) {
@@ -187,7 +194,26 @@ function CheckoutInner() {
         </div>
       ))}
 
+      {bumpProduct && (
+        <button type="button" onClick={() => setBumpId(bumpId ? null : bumpProduct.id)} style={{ width: '100%', textAlign: 'left', marginTop: '16px', padding: '14px 15px', borderRadius: '16px', cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', background: bumpId ? 'rgba(166,243,106,0.07)' : 'rgba(255,255,255,0.03)', border: bumpId ? '1px solid rgba(166,243,106,0.55)' : '1px solid var(--line)', display: 'flex', gap: '13px', alignItems: 'center' }}>
+          <img src={bumpProduct.image} alt="" style={{ width: '52px', height: '52px', borderRadius: '11px', objectFit: 'cover' }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.5px' }}>{t.bumpTitle}</span>
+            <span style={{ display: 'block', fontWeight: 800, fontSize: '14px', marginTop: '3px' }}>{bumpProduct.title}</span>
+          </span>
+          <span style={{ fontWeight: 800, color: 'var(--accent)' }}>{fmtBdt(bumpProduct.price, lang)}</span>
+          <span style={{ width: '22px', height: '22px', borderRadius: '7px', border: bumpId ? 'none' : '2px solid #475569', background: bumpId ? '#a6f36a' : 'transparent', display: 'grid', placeItems: 'center', color: '#10170c', flexShrink: 0 }}>
+            {bumpId && <Icon name="check" size={14} strokeWidth={3.2} />}
+          </span>
+        </button>
+      )}
+
       <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px' }}>
+        {bumpId && bumpProduct && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14.5px', padding: '5px 0', color: '#cbd5e1' }}>
+            <span>{bumpProduct.title}</span><span style={{ fontWeight: 700 }}>{fmtBdt(bumpProduct.price, lang)}</span>
+          </div>
+        )}
         {items.map((p) => (
           <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14.5px', padding: '5px 0', color: '#cbd5e1' }}>
             <span>{p.title}</span><span style={{ fontWeight: 700 }}>{fmtBdt(p.price, lang)}</span>

@@ -10,6 +10,7 @@ import BottomNav from '../components/BottomNav';
 import SwRegister from '../components/SwRegister';
 import WhatsFloat from '../components/WhatsFloat';
 import RefCapture from '../components/RefCapture';
+import PwaBanner from '../components/PwaBanner';
 import { readCart } from '../lib/cart';
 
 function AnnouncementBar() {
@@ -127,6 +128,7 @@ export default function RootLayout({ children }) {
           <main>{children}</main>
           <Footer />
           <WhatsFloat />
+          <PwaBanner />
           <BottomNav />
           <SwRegister />
           <RefCapture />

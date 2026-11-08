@@ -12,6 +12,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState([]);
+  const [sort, setSort] = useState('default');
+  const [searchFocus, setSearchFocus] = useState(false);
 
   useEffect(() => {
     const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }, { threshold: 0.08 });
@@ -43,8 +45,17 @@ export default function HomePage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((p) => p.title.toLowerCase().includes(q));
+    let list = q ? products.filter((p) => p.title.toLowerCase().includes(q)) : [...products];
+    if (sort === 'low') list.sort((a, b) => a.price - b.price);
+    if (sort === 'high') list.sort((a, b) => b.price - a.price);
+    if (sort === 'popular') list.sort((a, b) => (b.sold || 0) - (a.sold || 0));
+    return list;
+  }, [products, query, sort]);
+
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return products.filter((p) => p.title.toLowerCase().includes(q)).slice(0, 6);
   }, [products, query]);
 
   const featured = products.filter((p) => p.featured);
@@ -71,7 +82,20 @@ export default function HomePage() {
             placeholder={t.searchPh}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setSearchFocus(true)}
+            onBlur={() => setTimeout(() => setSearchFocus(false), 180)}
           />
+          {searchFocus && suggestions.length > 0 && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 30, background: 'linear-gradient(180deg, rgba(20,28,44,0.92), rgba(10,14,22,0.9))', border: '1px solid rgba(255,255,255,0.13)', borderRadius: '16px', backdropFilter: 'blur(20px)', overflow: 'hidden', textAlign: 'left', boxShadow: '0 20px 44px rgba(0,0,0,0.5)' }}>
+              {suggestions.map((p) => (
+                <a key={p.id} href={'/service/' + p.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '10px 13px', textDecoration: 'none', color: 'inherit', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <img src={p.image} alt="" style={{ width: '38px', height: '38px', borderRadius: '9px', objectFit: 'cover' }} />
+                  <span style={{ flex: 1, fontSize: '13.5px', fontWeight: 700, lineHeight: 1.35 }}>{p.title}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px' }}>{'৳' + p.price}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '30px' }}>
           {[
@@ -87,10 +111,32 @@ export default function HomePage() {
         </div>
       </section>
 
+      <div className="marquee" style={{ marginTop: '34px', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '11px 0' }} aria-hidden="true">
+        {[0, 1].map((dup) => (
+          <div key={dup} className="marquee-track">
+            {[t.f1T, t.f2T, t.f3T, t.statPaymentVal, t.statDeliveryVal, t.trustLine].map((txt, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--muted)', fontSize: '13px', fontWeight: 700 }}>
+                <Icon name="shield" size={13} color="#a6f36a" />{txt}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+
       {/* SERVICES */}
       <section id="services" style={{ padding: '52px 0 6px', scrollMarginTop: '80px' }}>
-        <h2 className="section-title">{query ? `${t.servicesTitle} — ${filtered.length}` : t.servicesTitle}</h2>
-        <p className="section-sub">{t.servicesSub}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '14px', flexWrap: 'wrap' }}>
+          <div>
+            <h2 className="section-title">{query ? `${t.servicesTitle} — ${filtered.length}` : t.servicesTitle}</h2>
+            <p className="section-sub">{t.servicesSub}</p>
+          </div>
+          <select className="inp" value={sort} onChange={(e) => setSort(e.target.value)} style={{ width: 'auto', padding: '9px 12px', fontSize: '13px', borderRadius: '11px' }} aria-label="sort">
+            <option value="default">{t.sortDefault}</option>
+            <option value="low">{t.sortLow}</option>
+            <option value="high">{t.sortHigh}</option>
+            <option value="popular">{t.sortPopular}</option>
+          </select>
+        </div>
         {loading ? (
           <div className="svc-grid" style={{ marginTop: '24px' }}>
             {[1, 2, 3, 4].map((i) => (
