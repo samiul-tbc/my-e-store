@@ -17,7 +17,7 @@ async function estoreOrderCodes() {
   const res = await sbFetch('site_settings?key=like.estore_ordidx_*&select=key&order=key.desc&limit=400');
   if (!res.ok) return [];
   const rows = await res.json().catch(() => []);
-  return (rows || []).map((r) => String(r.key).replace('estore_ordidx_', ''));
+  return [...new Set((rows || []).map((r) => String(r.key).replace('estore_ordidx_', '').replace(/_\d+$/, '')))];
 }
 
 export async function POST(req) {
