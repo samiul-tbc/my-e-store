@@ -6,6 +6,7 @@ import { useLang } from '../../components/LangContext';
 import Icon from '../../components/icons';
 import LiquidSeg from '../../components/LiquidSeg';
 import { readCart, clearCart } from '../../lib/cart';
+import { fmtBdt } from '../../lib/format';
 import { RELATIONS, THEMES, REL_THEME } from '../../lib/birthday-shared';
 
 const REL_KEYS = { premika: 'relPremika', apu: 'relApu', junior: 'relJunior', friend: 'relFriend', vai: 'relVai' };
