@@ -26,9 +26,16 @@ function SuccessInner() {
           ))}
         </div>
       </div>
-      <Link href={'/track' + (ids[0] ? '?q=' + encodeURIComponent(ids[0]) : '')} className="btn-lime" style={{ marginTop: '22px' }}>
-        <Icon name="package" size={17} />{t.goTrack}
-      </Link>
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '22px' }}>
+        <Link href={'/track' + (ids[0] ? '?q=' + encodeURIComponent(ids[0]) : '')} className="btn-lime">
+          <Icon name="package" size={17} />{t.goTrack}
+        </Link>
+        {ids[0] && (
+          <Link href={'/invoice/' + encodeURIComponent(ids[0])} className="btn-ghost">
+            <Icon name="doc" size={16} />{t.invoice}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
