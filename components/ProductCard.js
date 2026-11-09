@@ -34,7 +34,7 @@ export default function ProductCard({ p }) {
     <article className="svc-card">
       <div className="svc-media">
         <Link href={href} aria-label={p.title} style={{ position: 'absolute', inset: 0, display: 'block' }}>
-          <img src={p.image} alt={p.title} loading="lazy" />
+          <img src={p.image} alt={p.title} loading="lazy" decoding="async" />
         </Link>
         {off > 0 && <span className="off-badge" style={{ pointerEvents: 'none' }}>-{off}%</span>}
         <WishHeart id={p.id} />

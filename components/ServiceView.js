@@ -93,14 +93,14 @@ export default function ServicePage({ params }) {
           <div className="svc-card" style={{ cursor: 'zoom-in' }} onClick={() => setLightbox(true)}>
             <div className="svc-media" style={{ height: 'auto', aspectRatio: '4/3.2' }}>
               {off > 0 && <span className="off-badge">-{off}%</span>}
-              <img src={(p.images && p.images[imgIdx]) || p.image} alt={p.title} />
+              <img src={(p.images && p.images[imgIdx]) || p.image} alt={p.title} width={1000} height={800} decoding="async" />
             </div>
           </div>
           {p.images && p.images.length > 1 && (
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
               {p.images.map((src, i) => (
                 <button key={i} onClick={() => setImgIdx(i)} style={{ padding: 0, border: i === imgIdx ? '2px solid #a6f36a' : '2px solid transparent', borderRadius: '11px', overflow: 'hidden', cursor: 'pointer', background: 'none' }}>
-                  <img src={src} alt="" style={{ width: '58px', height: '58px', objectFit: 'cover', display: 'block' }} />
+                  <img src={src} alt="" width={58} height={58} loading="lazy" decoding="async" style={{ width: '58px', height: '58px', objectFit: 'cover', display: 'block' }} />
                 </button>
               ))}
             </div>
@@ -240,7 +240,7 @@ export default function ServicePage({ params }) {
 
       {lightbox && (
         <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(2,4,7,0.92)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', padding: '18px', cursor: 'zoom-out' }}>
-          <img src={(p.images && p.images[imgIdx]) || p.image} alt={p.title} style={{ maxWidth: '100%', maxHeight: '88vh', borderRadius: '16px', boxShadow: '0 30px 80px rgba(0,0,0,0.6)' }} />
+          <img src={(p.images && p.images[imgIdx]) || p.image} alt={p.title} decoding="async" style={{ maxWidth: '100%', maxHeight: '88vh', borderRadius: '16px', boxShadow: '0 30px 80px rgba(0,0,0,0.6)' }} />
           <span style={{ position: 'absolute', top: '18px', right: '18px', color: '#e2e8f0', display: 'inline-flex' }}><Icon name="x" size={26} /></span>
         </div>
       )}
