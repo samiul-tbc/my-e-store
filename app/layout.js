@@ -32,6 +32,12 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="bn">
+      <head>
+        <link rel="preconnect" href="https://api.qrserver.com" />
+        <link rel="dns-prefetch" href="https://api.qrserver.com" />
+        <link rel="preconnect" href="https://bsitgllbrnjsnddknitc.supabase.co" />
+        <link rel="dns-prefetch" href="https://bsitgllbrnjsnddknitc.supabase.co" />
+      </head>
       <body>
         <Shell>{children}</Shell>
       </body>
