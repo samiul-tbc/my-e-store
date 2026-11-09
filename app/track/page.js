@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
 import { fmtBdt, bnDigits } from '../../lib/format';
@@ -187,7 +188,11 @@ function TrackInner() {
       </div>
 
       {orders !== null && orders.length === 0 && (
-        <div className="glass" style={{ padding: '22px', textAlign: 'center', marginTop: '20px', color: 'var(--muted)', fontSize: '14.5px' }}>{t.trackNotFound}</div>
+        <div className="glass" style={{ padding: '34px', textAlign: 'center', marginTop: '20px' }}>
+          <span style={{ color: 'var(--muted)', display: 'inline-flex' }}><Icon name="search" size={40} /></span>
+          <div style={{ color: 'var(--muted)', fontSize: '14.5px', marginTop: '12px', lineHeight: 1.7 }}>{t.trackNotFound}</div>
+          <Link href="/#services" className="btn-lime" style={{ marginTop: '18px' }}>{t.heroCta}</Link>
+        </div>
       )}
 
       <div style={{ display: 'grid', gap: '14px', marginTop: '20px' }}>
