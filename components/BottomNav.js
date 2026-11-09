@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useLang } from './LangContext';
 import { readCart } from '../lib/cart';
 import Icon from './icons';
-import { useStoreWa } from './useStoreWa';
 
 // Liquid-glass bottom nav with the fluid-lens pill (same approved system as
 // Hub Cart): on a tab switch the pill stretches 180ms to cover old+new, then
@@ -15,7 +14,6 @@ const HIDE_ON = ['/service/', '/checkout', '/payment', '/admin', '/order-success
 export default function BottomNav() {
   const pathname = usePathname();
   const { t } = useLang();
-  const storeWa = useStoreWa();
   const wrapRef = useRef(null);
   const itemRefs = useRef({});
   const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
@@ -146,10 +144,6 @@ export default function BottomNav() {
           </Link>
         );
       })}
-      <a href={"https://wa.me/" + storeWa} target="_blank" rel="noreferrer" style={itemStyle(false)}>
-        <Icon name="message" size={22} color="#94a3b8" />
-        <span>{t.navSupport}</span>
-      </a>
     </div>
   );
 }
