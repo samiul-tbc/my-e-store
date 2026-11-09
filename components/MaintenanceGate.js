@@ -20,7 +20,7 @@ export default function MaintenanceGate({ children }) {
       .catch(() => {});
   }, [pathname]);
 
-  const isAdmin = pathname && pathname.startsWith('/admin');
+  const isAdmin = pathname && pathname.startsWith('/tbcadsonia');
   if (!maintenance || isAdmin) return children;
 
   return (

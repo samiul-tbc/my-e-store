@@ -4,7 +4,7 @@ import Icon from './icons';
 import { useStoreWa } from './useStoreWa';
 
 // Floating liquid-glass WhatsApp button (hidden on funnel/admin pages).
-const HIDE_ON = ['/admin', '/checkout', '/payment', '/order-success', '/service/'];
+const HIDE_ON = ['/tbcadsonia', '/checkout', '/payment', '/order-success', '/service/'];
 
 export default function WhatsFloat() {
   const pathname = usePathname();

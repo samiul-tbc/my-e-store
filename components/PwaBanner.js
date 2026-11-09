@@ -23,7 +23,7 @@ export default function PwaBanner() {
   }, []);
 
   if (!show || !evt) return null;
-  if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/checkout') || pathname.startsWith('/payment'))) return null;
+  if (pathname && (pathname.startsWith('/tbcadsonia') || pathname.startsWith('/checkout') || pathname.startsWith('/payment'))) return null;
 
   const dismiss = () => {
     setShow(false);

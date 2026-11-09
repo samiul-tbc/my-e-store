@@ -9,7 +9,7 @@ import Icon from './icons';
 // Liquid-glass bottom nav with the fluid-lens pill (same approved system as
 // Hub Cart): on a tab switch the pill stretches 180ms to cover old+new, then
 // spring-settles onto the target.
-const HIDE_ON = ['/service/', '/checkout', '/payment', '/admin', '/order-success'];
+const HIDE_ON = ['/service/', '/checkout', '/payment', '/tbcadsonia', '/order-success'];
 
 export default function BottomNav() {
   const pathname = usePathname();
