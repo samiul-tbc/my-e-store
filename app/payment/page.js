@@ -1,127 +1,92 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLang } from '../../components/LangContext';
-import Icon from '../../components/icons';
+import { usePayCtx, METHOD_LOGOS, USDT_LOGO } from '../../components/usePayCtx';
 import { fmtBdt } from '../../lib/format';
 
-function PaymentInner() {
+// Step 1 of the payment funnel (mirrors Hub Cart's processedorder page):
+// pick Manual Pay or Crypto Pay, then proceed to that flow.
+function SelectInner() {
   const { lang, t } = useLang();
   const router = useRouter();
-  const sp = useSearchParams();
-  const ids = (sp.get('orders') || '').split(',').filter(Boolean);
-  const [cfg, setCfg] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [method, setMethod] = useState('bkash');
-  const [trx, setTrx] = useState('');
-  const [copied, setCopied] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [fail, setFail] = useState('');
+  const { ids, summary, total, usdtAmount, ordersQs } = usePayCtx();
+  const [selected, setSelected] = useState('manual');
 
-  useEffect(() => {
-    fetch('/api/payments').then((r) => r.json()).then(setCfg).catch(() => {});
-    try {
-      const s = JSON.parse(localStorage.getItem('tbcx_last_order') || 'null');
-      if (s) setSummary(s);
-    } catch {}
-  }, []);
-
-  const total = summary && summary.ids && ids.every((i) => summary.ids.includes(i)) ? summary.total : null;
-  const isCrypto = method === 'crypto';
-  const m = cfg ? cfg.methods.find((x) => x.id === method) : null;
-  const usdtAmount = total != null && cfg ? (total / cfg.usdtRate).toFixed(2) : null;
-
-  const copy = async (text, key) => {
-    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 1600); } catch {}
-  };
-
-  const submit = async () => {
-    if (!trx.trim()) { setFail(t.trxPh); return; }
-    setBusy(true);
-    setFail('');
-    const res = await fetch('/api/order', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderIds: ids, method: isCrypto ? 'Crypto (USDT)' : (m ? m.label : method), trxId: trx.trim() }),
-    }).catch(() => null);
-    const d = res ? await res.json().catch(() => null) : null;
-    if (d && d.ok) {
-      router.push('/order-success?ids=' + ids.join(','));
-    } else {
-      setFail(d && d.error === 'dup_trx' ? `TrxID already used — order ${d.order || ''}` : t.errorGeneric);
-      setBusy(false);
-    }
-  };
-
-  if (!ids.length) return <div className="wrap" style={{ padding: '50px 0', color: 'var(--muted)' }}>{t.trackNotFound}</div>;
+  if (!ids.length) return <div className="wrap" style={{ padding: '50px 0', color: 'var(--muted)' }}>{t.payNoOrder}</div>;
 
   return (
-    <div className="wrap" style={{ padding: '28px 0 46px', maxWidth: '640px' }}>
-      <h1 className="section-title">{t.payTitle}</h1>
-      <p className="section-sub">{t.paySub}</p>
-      {total != null && (
-        <div className="glass" style={{ padding: '15px 18px', marginTop: '18px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16px' }}>
-          <span>{t.total}</span><span style={{ color: 'var(--accent)' }}>{fmtBdt(total, lang)}</span>
-        </div>
-      )}
-      <p style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '10px' }}>Order: {ids.join(', ')}</p>
-      {summary && summary.titles && (
-        <p style={{ color: '#cbd5e1', fontSize: '13.5px', marginTop: '5px', fontWeight: 600 }}>{summary.titles.join(' + ')}</p>
-      )}
+    <div className="wrap" style={{ padding: '24px 0 46px', maxWidth: '520px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+        <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#a6f36a', color: '#10170c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>3</span>
+        <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0 }}>{t.paySelectTitle}</h1>
+      </div>
 
-      <div style={{ display: 'grid', gap: '10px', marginTop: '18px' }}>
-        {(cfg ? cfg.methods : []).map((x) => (
-          <button key={x.id} className={'pay-card' + (method === x.id ? ' on' : '')} onClick={() => setMethod(x.id)}>
-            <span style={{ width: '42px', height: '42px', borderRadius: '12px', background: x.color + '22', border: `1px solid ${x.color}55`, display: 'grid', placeItems: 'center', color: x.color, fontWeight: 800, fontFamily: "'Manrope',sans-serif", fontSize: '15px' }}>{x.label[0]}</span>
-            <span style={{ flex: 1 }}>
-              <span style={{ display: 'block', fontWeight: 800, fontSize: '15.5px' }}>{x.label}</span>
-              <span style={{ display: 'block', color: 'var(--muted)', fontSize: '12.5px' }}>{t.payManual} — {x.dial}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+        {/* Manual Pay */}
+        <div
+          onClick={() => setSelected('manual')}
+          style={{
+            gridColumn: 'span 2', background: '#ffffff', borderRadius: '16px', cursor: 'pointer', overflow: 'hidden',
+            border: selected === 'manual' ? '2px solid #16a34a' : '1px solid #e2e8f0',
+            boxShadow: selected === 'manual' ? '0 0 12px rgba(22,163,74,0.4)' : 'none',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ background: '#16a34a', color: '#fff', fontSize: '9px', fontWeight: 900, textAlign: 'center', padding: '4px 0', letterSpacing: '0.6px' }}>{t.payRecommended}</div>
+          <div style={{ padding: '14px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              <img src={METHOD_LOGOS.bkash} alt="bKash" style={{ height: '18px', objectFit: 'contain' }} />
+              <img src={METHOD_LOGOS.nagad} alt="Nagad" style={{ height: '18px', objectFit: 'contain' }} />
+              <img src={METHOD_LOGOS.rocket} alt="Rocket" style={{ height: '19px', objectFit: 'contain' }} />
+              <img src={METHOD_LOGOS.upay} alt="Upay" style={{ height: '17px', objectFit: 'contain' }} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#15803d' }}>{t.payManualPay}</span>
+          </div>
+          <div style={{ background: '#dcfce7', padding: '6px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#166534' }}>{t.paySendMoneyLine}</div>
+        </div>
+
+        {/* Crypto Pay */}
+        <div
+          onClick={() => setSelected('crypto')}
+          style={{
+            gridColumn: 'span 2', background: '#ffffff', borderRadius: '16px', cursor: 'pointer', overflow: 'hidden',
+            border: selected === 'crypto' ? '2px solid #ff7a00' : '1px solid #e2e8f0',
+            boxShadow: selected === 'crypto' ? '0 0 12px rgba(255,122,0,0.3)' : 'none',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ padding: '16px 4px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <img src={USDT_LOGO} alt="USDT" style={{ height: '24px', width: '24px', marginBottom: '6px' }} />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#334155' }}>{t.payCryptoPay}</span>
+          </div>
+          <div style={{ background: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#475569' }}>{t.payBybitLine}</div>
+        </div>
+      </div>
+
+      {/* Order summary */}
+      <div className="glass" style={{ borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
+        {summary && summary.titles && (
+          <p style={{ color: '#cbd5e1', fontSize: '13.5px', fontWeight: 600, margin: '0 0 10px' }}>{summary.titles.join(' + ')}</p>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: '12.5px', margin: '0 0 8px' }}>Order: {ids.join(', ')}</p>
+        {total != null && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#cbd5e1' }}>
+            <span>{t.total}</span>
+            <span style={{ fontWeight: 800, color: '#f8fafc' }}>
+              {fmtBdt(total, lang)}
+              {selected === 'crypto' && usdtAmount ? ` (≈ $${usdtAmount} USDT)` : ''}
             </span>
-            <span style={{ width: '20px', height: '20px', borderRadius: '999px', border: method === x.id ? '6px solid #a6f36a' : '2px solid #334155', display: 'inline-block' }} />
-          </button>
-        ))}
-        <button className={'pay-card' + (isCrypto ? ' on' : '')} onClick={() => setMethod('crypto')}>
-          <span style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(38,161,123,0.13)', border: '1px solid rgba(38,161,123,0.4)', display: 'grid', placeItems: 'center', color: '#26a17b', fontWeight: 800, fontFamily: "'Manrope',sans-serif", fontSize: '15px' }}>₮</span>
-          <span style={{ flex: 1 }}>
-            <span style={{ display: 'block', fontWeight: 800, fontSize: '15.5px' }}>USDT (TRC20)</span>
-            <span style={{ display: 'block', color: 'var(--muted)', fontSize: '12.5px' }}>{t.payCrypto} — {t.usdtRate}</span>
-          </span>
-          <span style={{ width: '20px', height: '20px', borderRadius: '999px', border: isCrypto ? '6px solid #a6f36a' : '2px solid #334155', display: 'inline-block' }} />
-        </button>
+          </div>
+        )}
       </div>
 
-      {cfg && !isCrypto && m && (
-        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12.5px', color: 'var(--muted)', fontWeight: 700 }}>{m.label} {t.payNumber} (Send Money)</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
-            <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '21px', letterSpacing: '0.5px' }}>{m.number}</span>
-            <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => copy(m.number, 'num')}>
-              <Icon name={copied === 'num' ? 'check' : 'copy'} size={14} />{copied === 'num' ? t.payCopied : t.payCopy}
-            </button>
-          </div>
-          <p style={{ color: 'var(--muted)', fontSize: '13px', marginTop: '9px' }}>USSD: {m.dial}</p>
-        </div>
-      )}
-
-      {cfg && isCrypto && (
-        <div className="glass" style={{ padding: '18px', marginTop: '16px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12.5px', color: 'var(--muted)', fontWeight: 700 }}>{t.usdtAddr}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '13.5px', wordBreak: 'break-all', flex: 1, minWidth: '220px' }}>{cfg.usdtAddress}</span>
-            <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => copy(cfg.usdtAddress, 'addr')}>
-              <Icon name={copied === 'addr' ? 'check' : 'copy'} size={14} />{copied === 'addr' ? t.payCopied : t.payCopy}
-            </button>
-          </div>
-          {usdtAmount && <p style={{ color: 'var(--accent)', fontWeight: 800, marginTop: '10px', fontSize: '15px' }}>≈ ${usdtAmount} USDT</p>}
-        </div>
-      )}
-
-      <div style={{ marginTop: '18px' }}>
-        <label className="lbl">{t.trxPh} *</label>
-        <input className="inp" value={trx} onChange={(e) => setTrx(e.target.value)} placeholder={isCrypto ? 'TxHash' : '9XXXXXXXXX'} />
-        {fail && <p className="err">{fail}</p>}
-      </div>
-      <button className="btn-lime" style={{ width: '100%', justifyContent: 'center', marginTop: '16px' }} onClick={submit} disabled={busy || !cfg}>
-        <Icon name="check" size={17} />{busy ? t.processing : t.payDone}
+      <button
+        className="btn-lime"
+        style={{ width: '100%', justifyContent: 'center', padding: '15px', fontSize: '16px', fontWeight: 900, background: selected === 'crypto' ? 'linear-gradient(135deg,#f59e0b,#f97316)' : undefined, color: selected === 'crypto' ? '#1c1005' : undefined, border: 'none', cursor: 'pointer', borderRadius: '14px' }}
+        onClick={() => router.push(selected === 'crypto' ? '/payment/crypto?' + ordersQs : '/payment/manual?' + ordersQs)}
+      >
+        {selected === 'crypto' ? (usdtAmount ? `Pay $${usdtAmount} USDT (Crypto)` : t.payCryptoPay) : t.payManualPay}
       </button>
     </div>
   );
@@ -130,7 +95,7 @@ function PaymentInner() {
 export default function PaymentPage() {
   return (
     <Suspense fallback={null}>
-      <PaymentInner />
+      <SelectInner />
     </Suspense>
   );
 }
