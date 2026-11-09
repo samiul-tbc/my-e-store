@@ -6,7 +6,7 @@ export async function generateMetadata({ params }) {
   if (!p) return { title: 'TBC × E-store' };
   const desc = (p.tagline && (p.tagline.en || p.tagline.bn)) || '';
   return {
-    title: p.title + ' — TBC × E-store',
+    title: p.title,
     description: desc,
     openGraph: {
       title: p.title + ' — TBC × E-store',
