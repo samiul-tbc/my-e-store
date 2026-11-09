@@ -26,10 +26,10 @@ export function usePayCtx() {
 }
 
 export const METHOD_LOGOS = {
-  bkash: 'https://1000logos.net/wp-content/uploads/2021/02/Bkash-logo.png',
-  nagad: 'https://i.postimg.cc/3xv1gSBL/Nagad-Logo-wine.png',
-  rocket: 'https://i.postimg.cc/vBM08r5J/vecteezy-rocket-color-logo-mobile-banking-icon-68706013.png',
-  upay: 'https://i.postimg.cc/Gh9qphTM/upay-logo-mobile-banking-app-icon-transparent-background-free-png.png',
+  bkash: '/logos/bkash.png',
+  nagad: '/logos/nagad.png',
+  rocket: '/logos/rocket.png',
+  upay: '/logos/upay.png',
 };
-export const USDT_LOGO = 'https://cryptologos.cc/logos/tether-usdt-logo.png';
-export const BYBIT_LOGO = 'https://i.postimg.cc/vTPhzDcs/bybit5549.jpg';
+export const USDT_LOGO = '/logos/usdt.png';
+export const BYBIT_LOGO = '/logos/bybit.jpg';
