@@ -108,6 +108,25 @@ function Footer() {
           </a>
         </div>
       </div>
+      <div className="wrap" style={{ marginTop: '22px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '12px', fontWeight: 700, marginRight: '2px' }}>
+            <Icon name="shield" size={14} color="#a6f36a" />{t.statPayment}:
+          </span>
+          {[
+            { label: 'bKash', color: '#e2136e' },
+            { label: 'Nagad', color: '#ee4023' },
+            { label: 'Rocket', color: '#8c3494' },
+            { label: 'Upay', color: '#00b14f' },
+            { label: 'USDT TRC20', color: '#26a17b' },
+          ].map((chip) => (
+            <span key={chip.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', borderRadius: '999px', padding: '5px 12px', fontSize: '12.5px', fontWeight: 700, color: '#e2e8f0' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: chip.color, boxShadow: `0 0 8px ${chip.color}` }} />
+              {chip.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </footer>
   );
 }
