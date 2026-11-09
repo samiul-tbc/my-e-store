@@ -334,7 +334,7 @@ function OrdersTab({ data, api, reload }) {
             <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 'min(430px, 94vw)', background: '#0c1119', borderLeft: '1px solid var(--line)', padding: '22px', overflowY: 'auto', boxShadow: '-20px 0 60px rgba(0,0,0,0.5)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, color: '#a6f36a', fontSize: '17px' }}>{o.order_id}</span>
-                <button onClick={() => setDrawer(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={21} /></button>
+                <button aria-label="বন্ধ করুন" onClick={() => setDrawer(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={21} /></button>
               </div>
               <div style={{ marginTop: '14px' }}>
                 {row('কাস্টমার', o.customer_name)}
@@ -421,7 +421,7 @@ function ProductsTab({ data, api, reload }) {
             <Toggle label="Published" on={p.published !== false} onClick={() => patch(p.id, { published: p.published === false ? true : false })} />
             <Toggle label="Featured" on={!!p.featured} onClick={() => patch(p.id, { featured: !p.featured })} />
             <button className="btn-ghost" style={{ padding: '8px 13px', fontSize: '13px' }} onClick={() => setEdit(JSON.parse(JSON.stringify(p)))}><Icon name="edit" size={14} />এডিট</button>
-            <button className="btn-ghost" style={{ padding: '8px 11px', fontSize: '13px' }} title="ক্লোন" onClick={() => { const c = JSON.parse(JSON.stringify(p)); c.id = p.id + '-copy'; c.title = p.title + ' (Copy)'; c.published = false; setProducts((prev) => [...prev, c]); }}><Icon name="copy" size={14} /></button>
+            <button className="btn-ghost" style={{ padding: '8px 11px', fontSize: '13px' }} title="ক্লোন" aria-label="ক্লোন" onClick={() => { const c = JSON.parse(JSON.stringify(p)); c.id = p.id + '-copy'; c.title = p.title + ' (Copy)'; c.published = false; setProducts((prev) => [...prev, c]); }}><Icon name="copy" size={14} /></button>
             <button aria-label="delete" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', cursor: 'pointer' }} onClick={() => setProducts((prev) => prev.filter((x) => x.id !== p.id))}>
               <Icon name="trash" size={15} />
             </button>
@@ -434,7 +434,7 @@ function ProductsTab({ data, api, reload }) {
           <div className="glass" style={{ maxWidth: '620px', margin: '0 auto', padding: '22px', borderRadius: '18px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontWeight: 800, fontSize: '16.5px' }}>প্রোডাক্ট এডিট</div>
-              <button onClick={() => setEdit(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={20} /></button>
+              <button aria-label="বন্ধ করুন" onClick={() => setEdit(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Icon name="x" size={20} /></button>
             </div>
             <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
               <Field label="Slug / ID"><input className="inp" value={edit.id} onChange={(e) => setEdit({ ...edit, id: e.target.value })} /></Field>
