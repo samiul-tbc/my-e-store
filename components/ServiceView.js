@@ -162,6 +162,29 @@ export default function ServicePage({ params }) {
         </div>
       </div>
 
+      {/* DELIVERY PROCESS */}
+      <section className="glass" style={{ marginTop: '34px', padding: '20px', borderRadius: '18px' }} aria-label={t.dpTitle}>
+        <h2 style={{ fontSize: '17px', fontWeight: 800, margin: '0 0 16px' }}>{t.dpTitle}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '14px' }}>
+          {[
+            { icon: 'cart', title: t.dp1, desc: t.dp1D },
+            { icon: 'card', title: t.dp2, desc: t.dp2D },
+            { icon: 'shield', title: t.dp3, desc: t.dp3D },
+            { icon: 'download', title: t.dp4, desc: t.dp4D },
+          ].map((st, i) => (
+            <div key={st.title} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
+              <span style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(166,243,106,0.12)', border: '1px solid rgba(166,243,106,0.35)', display: 'grid', placeItems: 'center', color: '#a6f36a', flexShrink: 0 }}>
+                <Icon name={st.icon} size={18} />
+              </span>
+              <span>
+                <span style={{ display: 'block', fontWeight: 800, fontSize: '14px' }}>{i + 1}. {st.title}</span>
+                <span style={{ display: 'block', color: 'var(--muted)', fontSize: '12.5px', lineHeight: 1.55, marginTop: '2px' }}>{st.desc}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* REVIEWS */}
       <section style={{ marginTop: '46px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
