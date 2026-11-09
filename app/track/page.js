@@ -35,6 +35,26 @@ function Timeline({ t, status, createdAt, history }) {
   );
 }
 
+function CodeCopy({ t, code }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {}
+  };
+  return (
+    <button
+      onClick={copy}
+      aria-label={t.payCopy}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: copied ? '#a6f36a' : 'var(--muted)', borderRadius: '999px', padding: '4px 10px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+    >
+      <Icon name={copied ? 'check' : 'copy'} size={12} />{copied ? t.payCopied : t.payCopy}
+    </button>
+  );
+}
+
 function DownloadBox({ t, order, searchedByPhone, query }) {
   const [phone, setPhone] = useState('');
   const [info, setInfo] = useState(order.delivery);
@@ -177,7 +197,10 @@ function TrackInner() {
             <div key={o.code} className="glass" style={{ padding: '18px', borderRadius: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '16px', color: '#a6f36a' }}>{o.code}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                    <span style={{ fontFamily: "'Manrope',monospace", fontWeight: 800, fontSize: '16px', color: '#a6f36a' }}>{o.code}</span>
+                    <CodeCopy t={t} code={o.code} />
+                  </div>
                   <div style={{ fontWeight: 700, fontSize: '14.5px', marginTop: '3px' }}>{o.title}</div>
                   <div style={{ color: 'var(--muted)', fontSize: '12.5px', marginTop: '2px' }}>
                     {fmtBdt(o.price, lang)}{o.paymentMethod ? ' • ' + o.paymentMethod : ''} • {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''}
