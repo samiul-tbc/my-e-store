@@ -1,9 +1,12 @@
 'use client';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLang } from './LangContext';
 import Icon from './icons';
 import WishHeart from './WishHeart';
 import { fmtBdt } from '../lib/format';
+import { addToCart } from '../lib/cart';
 
 export function Stars({ rating, count }) {
   const full = Math.round(rating || 0);
@@ -21,19 +24,26 @@ export function Stars({ rating, count }) {
 
 export default function ProductCard({ p }) {
   const { lang, t } = useLang();
+  const router = useRouter();
+  const [added, setAdded] = useState(false);
   const off = p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
   const isNew = p.addedAt && (Date.now() - new Date(p.addedAt).getTime()) < 14 * 86400000;
   const badge = p.sold >= 3 ? 'HOT' : isNew ? 'NEW' : null;
+  const href = `/service/${p.id}`;
   return (
-    <Link href={`/service/${p.id}`} className="svc-card">
+    <article className="svc-card">
       <div className="svc-media">
-        {off > 0 && <span className="off-badge">-{off}%</span>}
+        <Link href={href} aria-label={p.title} style={{ position: 'absolute', inset: 0, display: 'block' }}>
+          <img src={p.image} alt={p.title} loading="lazy" />
+        </Link>
+        {off > 0 && <span className="off-badge" style={{ pointerEvents: 'none' }}>-{off}%</span>}
         <WishHeart id={p.id} />
-        {badge && <span style={{ position: 'absolute', top: '10px', left: off > 0 ? '64px' : '10px', background: badge === 'HOT' ? 'rgba(239,68,68,0.9)' : 'rgba(56,189,248,0.9)', color: '#fff', fontSize: '10.5px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', letterSpacing: '0.6px' }}>{badge}</span>}
-        <img src={p.image} alt={p.title} loading="lazy" />
+        {badge && <span style={{ position: 'absolute', top: '10px', left: off > 0 ? '64px' : '10px', background: badge === 'HOT' ? 'rgba(239,68,68,0.9)' : 'rgba(56,189,248,0.9)', color: '#fff', fontSize: '10.5px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', letterSpacing: '0.6px', pointerEvents: 'none' }}>{badge}</span>}
       </div>
       <div className="svc-body">
-        <div className="svc-title">{p.title}</div>
+        <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="svc-title">{p.title}</div>
+        </Link>
         <p className="svc-tag">{(p.tagline && (p.tagline[lang] || p.tagline.bn)) || ''}</p>
         {(p.reviewCount > 0 || p.sold > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
@@ -46,11 +56,27 @@ export default function ProductCard({ p }) {
             <span className="price">{fmtBdt(p.price, lang)}</span>
             {p.oldPrice > p.price && <span className="old-price">{fmtBdt(p.oldPrice, lang)}</span>}
           </div>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px' }}>
+          <Link href={href} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontWeight: 800, fontSize: '13.5px', textDecoration: 'none' }}>
             {t.details}<Icon name="arrowRight" size={15} />
-          </span>
+          </Link>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+          <button
+            className="btn-ghost"
+            style={{ flex: 1, justifyContent: 'center', padding: '10px 6px', fontSize: '13px' }}
+            onClick={() => { addToCart(p.id); setAdded(true); setTimeout(() => setAdded(false), 1800); }}
+          >
+            <Icon name={added ? 'check' : 'cart'} size={15} />{added ? t.addedToCart : t.addToCart}
+          </button>
+          <button
+            className="btn-lime"
+            style={{ flex: 1, justifyContent: 'center', padding: '10px 6px', fontSize: '13px' }}
+            onClick={() => { addToCart(p.id); router.push('/checkout?buy=' + encodeURIComponent(p.id)); }}
+          >
+            <Icon name="bolt" size={15} />{t.buyNow}
+          </button>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
