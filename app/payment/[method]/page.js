@@ -7,6 +7,9 @@ import { fmtBdt } from '../../../lib/format';
 
 const DARK = { bkash: '#9e0048', nagad: '#bf2f13', rocket: '#5e2264', upay: '#007a37' };
 
+// Display-only grouping for readability (01894 693 890); copying always uses the raw digits.
+const groupNum = (n) => { const d = String(n || '').replace(/\D/g, ''); return d.length === 11 ? d.slice(0, 5) + ' ' + d.slice(5, 8) + ' ' + d.slice(8) : String(n || ''); };
+
 // Step 3 (manual): one wallet's own page — mirrors Hub Cart's /payment/<brand>
 // pages: brand panel, numbered steps, TrxID box, Verify button.
 function MethodInner({ methodId }) {
@@ -80,7 +83,7 @@ function MethodInner({ methodId }) {
           <div>• {fill(t.payStepDial)}</div>
           <div>• {t.payStepSend}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span>• {t.payStepTo} <strong>{m.number}</strong></span>
+            <span>• {t.payStepTo} <strong>{groupNum(m.number)}</strong></span>
             <button onClick={copyNumber} style={{ background: '#ffffff', color: m.color, border: 'none', borderRadius: '5px', padding: '2px 9px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
               {copied ? t.payCopied : t.payCopy}
             </button>
