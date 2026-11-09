@@ -52,9 +52,16 @@ export default function ServicePage({ params }) {
   if (loading) return <div className="wrap" style={{ padding: '60px 0', color: 'var(--muted)' }}>{t.processing}</div>;
   if (!p) {
     return (
-      <div className="wrap" style={{ padding: '70px 0', textAlign: 'center' }}>
-        <p style={{ color: 'var(--muted)', fontSize: '16px' }}>{t.notFound}</p>
-        <Link href="/" className="btn-ghost" style={{ marginTop: '18px' }}><Icon name="arrowLeft" size={16} />{t.backHome}</Link>
+      <div className="wrap" style={{ padding: '60px 0' }}>
+        <div className="glass" style={{ padding: '38px 26px', textAlign: 'center', borderRadius: '18px' }}>
+          <span style={{ color: 'var(--muted)', display: 'inline-flex' }}><Icon name="search" size={42} /></span>
+          <div style={{ fontWeight: 800, fontSize: '18px', marginTop: '14px' }}>{t.notFound}</div>
+          <p style={{ color: 'var(--muted)', fontSize: '14.5px', marginTop: '8px', lineHeight: 1.7 }}>{t.notFoundSub}</p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '20px' }}>
+            <Link href="/#services" className="btn-lime">{t.heroCta}</Link>
+            <Link href="/" className="btn-ghost"><Icon name="arrowLeft" size={16} />{t.backHome}</Link>
+          </div>
+        </div>
       </div>
     );
   }
